@@ -1,3 +1,5 @@
+import { recordLanguageStarted } from './learning-history';
+import { completeLevel } from './progression';
 import './tokens.css';
 import './style.css';
 import './lesson.css';
@@ -10,8 +12,9 @@ type Phase = 'story' | 'learn' | 'practice' | 'shop' | 'checkout' | 'scanning' |
 type Move = keyof typeof pack.directions;
 const practice: Move[] = ['right', 'left', 'forward', 'backward'];
 const app = document.querySelector<HTMLDivElement>('#app')!;
+try { recordLanguageStarted(localStorage, 'ne'); } catch { /* Optional browser-local learning history. */ }
 app.innerHTML = `
-  <header class="masthead"><a class="brand" href="./" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · YOUR FIRST ERRAND</span><div class="header-actions"><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
+  <header class="masthead"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/map/index.html' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · YOUR FIRST ERRAND</span><div class="header-actions"><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
     <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="round" aria-label="Show a navigation hint">?</button></div>
     <div class="cue" aria-label="Direction cue"><div class="cue-word"><div id="target" class="target" lang="ne"></div><span id="pronunciation" class="latin-guide" lang="ne-Latn"></span></div><p id="caption" hidden></p></div>
@@ -223,9 +226,10 @@ function finish() {
   // Completion is tied to crossing the doorway with the packed shopping.
   if (phase !== 'exit' || !outside(player)) return;
   phase = 'complete'; busy = false; clearTimeout(idleTimer); render();
+  try { completeLevel(localStorage, 'little-shop'); } catch { /* Play works without storage. */ }
   const mastered = outcomes.filter(outcome => !outcome.misses && !outcome.helped).length;
   el('results').hidden = false;
-  el('results').innerHTML = `<div class="eyebrow">CHAPTER 01 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and walked home with your shopping.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="again" class="primary">Play the story again ↗</button>`;
+  el('results').innerHTML = `<div class="eyebrow">CHAPTER 01 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and walked home with your shopping.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="again" class="primary">Play the story again ↗</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="primary map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
   el('again').onclick = restart; el('again').focus(); say('A little more at home.', 'Four words you’ve put into practice.');
 }
 function restart() {

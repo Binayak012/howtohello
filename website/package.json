@@ -1,0 +1,18 @@
+{
+  "name": "wayword-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5174",
+    "build:game": "npm --prefix .. run build -- --base /game/ --outDir website/public/game",
+    "predev": "npm run build:game",
+    "prebuild": "npm run build:game"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}
