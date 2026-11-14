@@ -79,3 +79,7 @@ The tracing heading has a speaker button and a short Latin-letter pronunciation 
 No speech service or browser-installed voice is used for playback. Switching letters or leaving the tracing screen stops the audio. Earlier synthetic MP3s and their generation script remain as unused prototype assets; the active player references only the user’s WAV files.
 
 Written hints are approximate. Reference: https://pressbooks.bccampus.ca/nepali/chapter/chapter-1-unit-2-vowel-letters/
+
+## Map music
+
+The map has an original, low-volume, 32-beat menu loop (a nostalgic music-box melody, warm retro chords, gently swaying arpeggios, and short stereo reverb at 68 BPM), generated locally with Web Audio. The floating music button remembers the on/off choice separately from transition sound. Browser autoplay rules may require a click to begin; the button then reads Play music. Playback suspends while the tab is hidden and fades/stops when leaving the map. No external music requests are made.

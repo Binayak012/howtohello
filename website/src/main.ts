@@ -24,13 +24,14 @@ const isLanding = !isAuth && !isLanguages && !isMap && !isUnit;
 let stopAuthGuide = () => {};
 let stopAuthEntrance = () => {};
 let stopMap = () => {};
+let stopLanguages = () => {};
 let stopUnit = () => {};
 if (isUnit) {
 stopUnit = renderBasicUnit(app, brand);
 } else if (isMap) {
 stopMap = renderLevelMap(app, brand);
 } else if (isLanguages) {
-renderLanguages(app, brand);
+stopLanguages = renderLanguages(app, brand);
 } else if (isLanding) {
 app.innerHTML = `
 <a class="skip" href="#main">Skip to content</a>
@@ -102,7 +103,7 @@ const stopAdventureTransition = setupAdventureTransition(isAuth, destination => 
   window.scrollTo({ top: 0, behavior: 'instant' });
   renderPage();
 });
-disposePage = () => { stopUnit(); stopMap(); stopAuthEntrance(); stopAuthGuide(); stopScrollWords(); stopAdventureTransition(); };
+disposePage = () => { stopLanguages(); stopUnit(); stopMap(); stopAuthEntrance(); stopAuthGuide(); stopScrollWords(); stopAdventureTransition(); };
 }
 renderPage();
 window.addEventListener('popstate', renderPage);

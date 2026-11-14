@@ -33,10 +33,11 @@ export const mapNatureMarkup = `<svg class="map-nature" viewBox="0 0 1600 900" p
 <path d="M-90 870Q155 680 440 805T850 950H-90Z" fill="#c9dea0"/>
 <path class="nature-stream" d="M-30 432C220 427 130 594 242 648S214 816 515 950" fill="none" stroke="#e2dbb1" stroke-width="75" stroke-linecap="round"/>
 <path class="nature-stream" d="M-30 432C220 427 130 594 242 648S214 816 515 950" fill="none" stroke="url(#map-water)" stroke-width="54" stroke-linecap="round"/>
-<g class="nature-stream" fill="none" stroke="#e9fff3" stroke-width="3" stroke-linecap="round" opacity=".65"><path d="m123 493 20 8m40 124 19 11m62 86 21 10m-13 79 28 17m53 38 27 13"/></g>
+<g class="nature-stream" fill="none" stroke="#e9fff3" stroke-width="3" stroke-linecap="round" opacity=".65"><path class="nature-ripples" d="m123 493 20 8m40 124 19 11m62 86 21 10m-13 79 28 17m53 38 27 13"/></g>
+<g class="nature-stream" fill="none" stroke="#effff6" stroke-linecap="round"><path class="nature-river-current" d="M-30 432C220 427 130 594 242 648S214 816 515 950" stroke-width="2.5" stroke-dasharray="18 87 36 110" opacity=".43"/><path class="nature-river-current nature-river-current-soft" d="M-30 432C220 427 130 594 242 648S214 816 515 950" transform="translate(8 -3)" stroke-width="1.6" stroke-dasharray="10 120 24 95" opacity=".32"/></g>
 <g fill="#568e5e" opacity=".28"><path d="m460 486 4-17 4 17 7-10 2 13m534 148 5-15 4 17 7-10 1 12m-600 42 5-17 4 17 6-10 1 12m741-235 4-16 5 16 5-9 2 11"/></g>
-${trees.map(([x, y, scale], i) => `<g class="nature-tree nature-tree-${i}" transform="translate(${x} ${y}) scale(${scale})"><g class="nature-tree-pop"><use href="#map-tree-shape"/></g></g>`).join('')}
-${flowers.map(([x, y, color], i) => `<g class="nature-flower nature-flower-${i}"><g transform="translate(${x} ${y})"><g class="nature-flower-pop"><use href="#map-flower-shape" style="color:${color}"/></g></g></g>`).join('')}
+${trees.map(([x, y, scale], i) => `<g class="nature-tree nature-tree-${i}" transform="translate(${x} ${y}) scale(${scale})" style="--wind-duration:${4.6 + i % 5 * .45}s;--wind-delay:-${i * .73}s"><g class="nature-tree-pop"><g class="nature-tree-wind"><use href="#map-tree-shape"/></g></g></g>`).join('')}
+${flowers.map(([x, y, color], i) => `<g class="nature-flower nature-flower-${i}" style="--wind-duration:${3.5 + i % 6 * .35}s;--wind-delay:-${i * .47}s"><g transform="translate(${x} ${y})"><g class="nature-flower-pop"><g class="nature-flower-wind"><use href="#map-flower-shape" style="color:${color}"/></g></g></g></g>`).join('')}
 <g fill="#a8aa96" stroke="#e1e0c9" stroke-width="2"><path d="M330 662q8-18 28-7l8 16q-14 9-37 1Z"/><path d="M350 685q8-12 20-3l3 10-25 1Z"/><path d="M1280 820q10-15 27-4l4 13-34 1Z"/></g>
 <g fill="none" stroke="#66756c" stroke-width="3" stroke-linecap="round" opacity=".45"><path d="M1060 215q10-12 20 0 10-12 20 0M1110 240q7-8 14 0 7-8 14 0"/></g>
 </svg>`;
