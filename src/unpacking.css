@@ -17,7 +17,7 @@
 .unpack-tray button .unpack-dot{width:22px;height:22px}
 .unpack-tray button.unpack-wrong{animation:unpack-shake .4s}
 .arrival-answers button.unpack-right{border-color:var(--teal);background:#e3f1ec;opacity:1}
-.unpack-app .arrival-complete .arrival-spark{width:48px;height:48px;font-size:26px;margin-bottom:10px;border-radius:16px}
+.unpack-app .arrival-complete .arrival-spark{width:44px;height:44px;font-size:24px;margin-bottom:8px;border-radius:15px}.unpack-app .arrival-complete .arrival-words{margin:10px 0}.unpack-app .arrival-complete h2{margin:4px 0 8px}.unpack-app .arrival-complete>p{margin:6px 0}.unpack-app .arrival-complete .arrival-next{margin-top:10px}
 .unpack-status{min-height:20px;font-size:12px!important;font-weight:700;color:var(--teal-d)!important}
 .unpack-status [lang],.unpack-status{font-family:inherit}
 .unpack-words li{flex-direction:column;gap:3px}.unpack-words .unpack-dot{width:16px;height:16px}
@@ -25,7 +25,7 @@
 @keyframes unpack-shake{25%{translate:-5px 0}75%{translate:5px 0}}
 @media(max-width:560px){
   .unpack-panel{transform:none;left:12px;right:12px;width:auto}
-  .unpack-app:is([data-phase=study],[data-phase=unpack],[data-phase=check],[data-phase=look]) .arrival-world{bottom:var(--unpack-panel,45%)}
+  .unpack-app:is([data-phase=study],[data-phase=unpack],[data-phase=check],[data-phase=look],[data-phase=count],[data-phase=recall]) .arrival-world{bottom:var(--unpack-panel,45%)}
   .unpack-swatches{gap:5px}.unpack-swatches button{font-size:11px;padding:8px 2px}
   .unpack-panel h2{font-size:21px}
 }

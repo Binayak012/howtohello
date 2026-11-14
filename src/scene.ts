@@ -4,7 +4,7 @@ import { racks, DIRECTIONS, type Player, type Rack } from './core';
 import tokens from './tokens.json';
 import { createStock, layouts, type ShelfUnit } from './stock';
 import { GoldenMarket } from './market';
-import type { MarketPose, ActivityId } from './market-world';
+import { pickColors, type MarketPose, type ActivityId } from './market-world';
 
 const c = tokens.color;
 const materials = new Map<string, THREE.MeshStandardMaterial>();
@@ -513,13 +513,13 @@ export class ShopScene {
     ball(this.carriedGoods,[-.03,-.08,.04],[.065,.085,.05],tokens.skin.T3.base);
     cylinder(this.carriedGoods,[-.03,-.23,.04],.055,.07,.21,c.cream);
     if(kind==='toy'){
-      ball(this.carriedGoods,[0,.15,0],[.09,.11,.07],'#b95e4e');ball(this.carriedGoods,[0,.3,0],[.1,.09,.08],'#c96b53');
-      for(const side of [-1,1]){ball(this.carriedGoods,[side*.08,.38,0],[.04,.04,.03],'#b95e4e');ball(this.carriedGoods,[side*.035,.31,.075],[.009,.012,.009],'#392d2c');}
+      // The same teddy model as in the street, so it doesn't change look once it's in your hand.
+      const toy=new THREE.Group();this.market.teddy(toy);toy.scale.setScalar(.62);toy.position.set(-.02,-.1,0);this.carriedGoods.add(toy);
     }else{
       box(this.carriedGoods,[.34,.22,.24],[0,.03,0],'#c5a06b');
       for(let i=0;i<count;i++){
-        if(kind==='flowers'){box(this.carriedGoods,[.012,.25,.012],[(i%3-1)*.08,.22,Math.floor(i/3)*.08],'#63885b');ball(this.carriedGoods,[(i%3-1)*.08,.36,Math.floor(i/3)*.08],[.065,.04,.065],i%2?'#dfbce4':'#edb28e');}
-        else ball(this.carriedGoods,[(i%3-1)*.08,.2,Math.floor(i/3)*.08],[.07,.07,kind==='bread'?.17:.07],kind==='bread'?'#dfb678':'#dc7954');
+        if(kind==='flowers'){box(this.carriedGoods,[.012,.25,.012],[(i%3-1)*.08,.22,Math.floor(i/3)*.08],'#63885b');ball(this.carriedGoods,[(i%3-1)*.08,.36,Math.floor(i/3)*.08],[.065,.04,.065],pickColors.flowers.hex);}
+        else ball(this.carriedGoods,[(i%3-1)*.08,.2,Math.floor(i/3)*.08],[.07,.07,kind==='bread'?.17:.07],kind==='bread'?'#dfb678':pickColors.fruit.hex);
       }
     }
   }

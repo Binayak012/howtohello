@@ -3,11 +3,16 @@ export const marketStart = (): MarketPose => ({ x:1.2, z:7.8, yaw:Math.PI * 1.5 
 
 // World coordinates: the street runs east/west, across the shop entrance.
 export const marketActivities = [
-  { id:'fruit', name:'Fruit stall', person:'Maya · fruit seller', x:11.2, z:5.35, count:2, item:'apples', hint:'Along this footpath, past the family', request:'I’m packing your picnic. How many apples does this note ask for?', done:'Two apples for your picnic. All packed!', color:'#d67a53', required:true },
+  { id:'fruit', name:'Fruit stall', person:'Maya · fruit seller', x:11.2, z:5.35, count:2, item:'apples', hint:'Along this footpath, past the family', request:'I’m packing your picnic. The note asks for रातो apples. How many?', done:'Two red apples for your picnic. All packed!', color:'#d67a53', required:true },
   { id:'bread', name:'Bakery', person:'Arun · baker', x:-9.2, z:5.35, count:3, item:'coins', hint:'Back along the same footpath', request:'A warm loaf costs तीन rupees. Put that many one-rupee coins on the counter.', done:'Three rupees, exactly. Here’s your warm loaf!', color:'#ceab60', required:true },
-  { id:'flowers', name:'Flower stall', person:'Tara · flower seller', x:-2.4, z:22.65, count:4, item:'flowers', hint:'Across the street, near the crossing', request:'Make a bouquet with चार flowers. Take them from the vase on your left — बायाँ.', done:'Four flowers from the left vase. A lovely bouquet!', color:'#ad7896', required:true },
-  { id:'family', name:'Find the lost toy', person:'A neighbor and their child', x:5.2, z:7.55, count:1, item:'toy', hint:'A few steps ahead on this footpath', request:'Our little one lost a red teddy. Face the shop, turn right toward the bakery, then look behind the planter past it.', done:'You found the teddy! Look at that smile.', color:'#748e9c', required:false },
+  { id:'flowers', name:'Flower stall', person:'Tara · flower seller', x:-2.4, z:22.65, count:4, item:'flowers', hint:'Across the street, near the crossing', request:'Make a bouquet with चार पहेँलो flowers. Take them from the vase on your left — बायाँ.', done:'Four yellow flowers from the left vase. A lovely bouquet!', color:'#ad7896', required:true },
+  { id:'family', name:'Find the lost toy', person:'A neighbor and their child', x:5.2, z:7.55, count:1, item:'toy', hint:'A few steps ahead on this footpath', request:'Our little one lost a रातो teddy. Face the shop, turn right toward the bakery, then look behind the planter past it.', done:'You found the teddy! Look at that smile.', color:'#748e9c', required:false },
 ] as const;
+/** Color tests in the finale: the asked-for color and the distractor next to it. */
+export const pickColors = {
+  fruit: { word:'रातो', roman:'raato', english:'red', hex:'#d4533e', otherEnglish:'green', other:'#7fae4a' },
+  flowers: { word:'पहेँलो', roman:'pahelo', english:'yellow', hex:'#e9b52f', otherEnglish:'white', other:'#f6f3ec' },
+} as const;
 export type MarketActivity = typeof marketActivities[number];
 export type ActivityId = MarketActivity['id'];
 export const learnedNumbersKey = 'wayword.numbers.ne.v1';

@@ -3,7 +3,7 @@ import { baseBeats, routeTo, start, step, turn, type Player } from '../src/core'
 
 const keys: Record<string, string> = { left:'ArrowLeft', right:'ArrowRight', forward:'ArrowUp', backward:'ArrowDown', take:'Space' };
 async function learn(page: Page, snapshots = false) {
-  await page.addInitScript(()=>localStorage.setItem('wayword.progress.ne.v1','["moving-in","second-lesson"]'));
+  await page.addInitScript(()=>localStorage.setItem('wayword.progress.ne.v1','["moving-in","second-lesson","counting","letters"]'));
   await page.goto('/?level=shop');
   await expect(page.getByRole('heading', { name:'Your first little errand.' })).toBeVisible();
   if (snapshots) await page.screenshot({ path:'test-results/story.png' });
@@ -149,7 +149,7 @@ for (const phone of [false, true]) {
     expect(await page.evaluate(async () => !(await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(true);
     await expect(page.locator('#market-journey')).toBeHidden();
     await expect(page.locator('#market-arrival')).toBeHidden();
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wayword.progress.ne.v1') ?? '[]'))).toEqual(['moving-in','second-lesson','little-shop']);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wayword.progress.ne.v1') ?? '[]'))).toEqual(['moving-in','second-lesson','counting','letters','little-shop']);
 
     await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-complete.png` });
     // The closed-door completion stays put until the learner chooses Next level.
@@ -167,7 +167,8 @@ for (const phone of [false, true]) {
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market', { timeout:15000 });
     await expect(page.locator('#results')).toBeHidden();
     await expect(page.locator('#market-title')).toHaveText('The morning market.');
-    await expect(page.getByRole('button', { name:'Learn numbers 1–5' })).toBeVisible();
+    await expect(page.getByRole('button', { name:'Start exploring' })).toBeVisible();
+    await expect(page.locator('.finale-topics li')).toHaveCount(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
     await page.getByRole('button', { name:'Replay the shop', exact:true }).click();

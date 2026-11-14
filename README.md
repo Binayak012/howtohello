@@ -1,8 +1,15 @@
 # Wayword — A new neighborhood
 
-The story has four chapters: **Your First Hello**, **Unpack Your Suitcase**, **The Little Shop**, and **The Morning Market** finale. New players begin in the courtyard, and each chapter's results screen leads straight into the next. Existing shop and market saves retain access to those chapters without inventing completion of the new lessons.
+The story has six chapters, unlocked in order:
 
-The hosted site now introduces Basic before the story: trace five Nepali vowels, listen to the bundled recordings, or use the keyboard alternative to unlock the neighborhood. This writing introduction is separate from the four story chapters. Existing chapter saves keep their access. Run `npm test` for all core, progression and tracing rules; `npm run test:website` also checks actual desktop/phone tracing and navigation into chapter one.
+1. **Your First Hello**: greetings (courtyard)
+2. **Unpack Your Suitcase**: colors (your room)
+3. **Counting with Lila**: numbers 1–5 (courtyard bench)
+4. **Your First Letters**: trace five vowels (website `/unit` page)
+5. **The Little Shop**: directions
+6. **The Morning Market**: the finale, reviewing greetings, colors, numbers and directions together
+
+New players begin in chapter one; letter tracing no longer gates the start. Each chapter's results screen leads straight into the next, using `levelHref`/`nextLevel` in `src/progression.ts`. Existing shop and market saves retain access to those chapters without inventing completion of the new lessons. Run `npm test` for all state, progression and tracing rules; `npm run test:website` also checks the map, tracing and navigation.
 
 ## Your First Hello — chapter one
 
@@ -18,9 +25,17 @@ Carrying your suitcase through the door walks you into your new room; the result
 
 ## Unpack Your Suitcase — chapter two
 
-Set in the room you just moved into. Explore five color cards: रातो (raato, red), निलो (nilo, blue), पहेँलो (pahelo, yellow), हरियो (hariyo, green) and सेतो (seto, white). Asha then names a color in Nepali only and you put away the matching item from the open suitcase on the bed, by tapping it in the room or using the buttons below (which also work without WebGL). Each item moves to the shelf or a hook. A three-question check asks the color of things around the room. A wrong pick explains which color you chose. Completion saves the chapter and opens The Little Shop. Rules live in `src/unpack-state.ts`; the screen is `src/unpacking.ts`, reusing the chapter one room from `src/arrival-scene.ts`. It opens at `?level=second-lesson` once chapter one is complete. Native-speaker review is pending.
+Set in the room you just moved into. Explore five color cards: रातो (raato, red), निलो (nilo, blue), पहेँलो (pahelo, yellow), हरियो (hariyo, green) and सेतो (seto, white). Asha then names a color in Nepali only and you put away the matching item from the open suitcase on the bed, by tapping it in the room or using the buttons below (which also work without WebGL). Each item moves to the shelf or a hook. A three-question check asks the color of things around the room. A wrong pick explains which color you chose. Completion saves the chapter and opens Counting with Lila. Rules live in `src/unpack-state.ts`; the screen is `src/unpacking.ts`, reusing the chapter one room from `src/arrival-scene.ts`. It opens at `?level=second-lesson` once chapter one is complete. Native-speaker review is pending.
 
-## The Little Shop — chapter three
+## Counting with Lila — chapter three
+
+Back in the courtyard, Lila stands behind the bench with five apples and a basket. Explore cards for एक, दुई, तीन, चार, पाँच (1–5) with Nepali digits and apple groups. Lila then asks for तीन, एक and चार apples. Tap apples on the bench to add them, tap one in the basket to take it out, or use the − / + buttons; then hand the basket over. A wrong count names what you gave. Two quick questions ask how many apples Lila put in the basket. Completion opens chapter four. Rules: `src/counting-state.ts`; screen: `src/counting.ts`; route `?level=counting`.
+
+## Your First Letters — chapter four
+
+On the hosted site's `/unit/` page: trace अ आ इ ई उ with the pencil guide, hear each recording, or use the keyboard alternative. It is locked until chapter three is complete, but stays usable if browser storage is blocked. Finishing saves `letters` and offers The Little Shop. In the standalone game (`npm run dev:game`) the route shows a note pointing to the full site.
+
+## The Little Shop — chapter five
 
 A local, first-person language lesson built from the Wayword handoff. The story follows your first errand in a new neighborhood: learn four Nepali directions, collect a reusable bag, two pieces of fruit and a bottle, bring them to checkout, pick up the packed shopping, and walk toward the closed door to finish. Choose Next level on the completion prompt to open the door and walk outside into the market preview.
 
@@ -34,13 +49,13 @@ The interior includes a checkout, chilled drinks, bread, pantry shelving, produc
 
 Exit guidance turns you toward the door and uses forward steps. After shop completion, Next level starts the departure: the opaque door swings open, sunlight catches your hand, and the camera steps onto a raised footpath before turning right. The wider market runs perpendicular to the shop, with footpaths on both sides. Varied adult and older shoppers exchange goods with vendors; a parent calms a stomping child, and a delivery bicycle passes along the road. Pink clouds, blue and coral sky, birds, pennants, dust and a sinking low sun fill the morning scene. Continue skips the nine-second reveal; reduced-motion preferences show the arrival immediately. Arrival offers the number lesson. Restart cancels the walk or lesson and restores the shop. Street geometry and animation live in `src/market.ts`.
 
-## Counting at the market — the finale
+## The Morning Market — chapter six, the finale
 
-The market starts by teaching Nepali numbers 1–5: each study card pairs the word, Nepali digit, English value, approximate Latin reading guide and a countable group of apples. Explore all five before starting practice. Five word-to-number matches unlock free roaming. Use WASD to move, arrow keys to turn, drag the scene to look (including down at objects), and E/Space to interact nearby. Touch controls and action buttons provide the same movement and actions. Furniture and people block movement; other shoppers step aside when you approach a vendor.
+The finale reviews the four spoken topics together. It opens on a review card (greetings, colors, numbers, directions) and goes straight into free roaming; numbers are taught in chapter three, and **Review numbers 1–5** remains available while exploring. Use WASD to move, arrow keys to turn, drag the scene to look (including down at objects), and E/Space to interact nearby. Touch controls and action buttons provide the same movement and actions. Furniture and people block movement; other shoppers step aside when you approach a vendor.
 
-Visit neighbors in any order. Greet them with the same Namaste learned in the shop, then perform activities in the world: pick two apples into your basket; pay three one-rupee coins for a loaf and receive it from the baker; gather four flowers from the left vase; or follow right/behind direction clues to find a lost teddy behind a planter and carry it back to the child. The child’s task uses directions, not counting. Wrong quantities can be corrected by putting items or coins back. Vendors turn, greet, gesture, fetch goods and exchange items. The parent points toward the toy; the child stops crying, smiles, and holds the returned teddy. Transactions and pick-ups animate in 3D; reduced motion uses immediate object changes and held gesture poses.
+Visit neighbors in any order. Greet each with नमस्ते, then perform activities in the world: pick two रातो (red) apples into your basket; pay three one-rupee coins for a loaf and receive it from the baker; gather four पहेँलो (yellow) flowers from the left vase, not the सेतो (white) ones on the right; or follow right/behind direction clues to find a lost रातो teddy behind a planter and carry it back to the child. The child’s task uses directions, not counting. Wrong quantities can be corrected by putting items or coins back. Vendors turn, greet, gesture, fetch goods and exchange items. The parent points toward the toy; the child stops crying, smiles, and holds the returned teddy. Transactions and pick-ups animate in 3D; reduced motion uses immediate object changes and held gesture poses.
 
-Finishing the three stall exchanges saves the market finale; the toy rescue is optional. Exploration remains open afterward. The number introduction and completed visits are remembered separately, so returning learners can resume free roaming without repeating the cards. Reviewing numbers pauses movement and preserves the current task. The Aa control applies throughout; audio is not yet included. The map unlocks this chapter after The Little Shop and resumes it at `/game/index.html?level=market`. A fresh learner visiting a locked chapter sees a return to chapter one. Lesson logic lives in `src/numbers.ts`; roaming and physical interactions live in `src/market-play.ts`, with collision and activity data in `src/market-world.ts`. Vocabulary was cross-checked against [Introduction to the Nepali Language, Numerals](https://pressbooks.bccampus.ca/nepali/chapter/chapter-1-unit-9-numerals/); native-speaker review of the complete learning experience remains pending.
+Finishing the three stall exchanges saves the market finale; the toy rescue is optional. Exploration remains open afterward. Starting exploration and completed visits are remembered, so returning learners resume free roaming directly. Reviewing numbers pauses movement and preserves the current task. The Aa control applies throughout; audio is not yet included. The map unlocks this chapter after The Little Shop and resumes it at `/game/index.html?level=market`. A fresh learner visiting a locked chapter sees a return to chapter one. Lesson logic lives in `src/numbers.ts`; roaming and physical interactions live in `src/market-play.ts`, with collision and activity data in `src/market-world.ts`. Vocabulary was cross-checked against [Introduction to the Nepali Language, Numerals](https://pressbooks.bccampus.ca/nepali/chapter/chapter-1-unit-9-numerals/); native-speaker review of the complete learning experience remains pending.
 
 ## Run
 

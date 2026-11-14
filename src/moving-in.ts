@@ -1,7 +1,7 @@
 import './moving-in.css';
 import {ArrivalScene} from './arrival-scene';
 import {arrivalStart,initialArrival,arrivalAction,arrivalSpots,arrivalPhrases,walkArrival,type ArrivalPose,type ArrivalState,type ArrivalTarget,type ArrivalAction} from './arrival-state';
-import {completeLevel,journey} from './progression';
+import {completeLevel,levelHref,nextLevel} from './progression';
 import {recordLanguageStarted} from './learning-history';
 
 const suitcaseIcon='<svg viewBox="0 0 64 80" aria-hidden="true"><rect x="20" y="3" width="24" height="12" rx="4" fill="none" stroke="#645b4f" stroke-width="5"/><rect x="7" y="14" width="50" height="59" rx="10" fill="#648e9d"/><path d="M20 15v56M44 15v56" stroke="#a5b8bb" stroke-width="4"/><rect x="32" y="25" width="16" height="20" rx="3" fill="#efc65d"/><circle cx="40" cy="35" r="5" fill="#fff0ad"/><circle cx="17" cy="74" r="4" fill="#5c6056"/><circle cx="47" cy="74" r="4" fill="#5c6056"/></svg>';
@@ -112,8 +112,8 @@ class MovingInGame{
   private giveParcel(){this.setState('return-parcel');this.scene?.returnParcel(this.pose);this.closeDialogue();this.pending=true;this.say('Lila reaches for her parcel.');this.later(900,()=>{this.pending=false;this.information('LILA · YOUR NEIGHBOR','“धन्यवाद!”','“Thank you! That was kind of you.” You recognize the phrase you used with Asha.');});}
   /** Where the player goes after this chapter: straight into chapter 2 once it is built, otherwise the journey map. */
   private nextStep(){
-    const next=journey[1],website=import.meta.env.BASE_URL==='/game/';
-    if(next.implemented)return{ready:true,next,href:`${website?'/game/index.html':''}?level=${next.route}`,label:`Start chapter ${String(next.chapter).padStart(2,'0')} ↗`};
+    const next=nextLevel('moving-in')!,website=import.meta.env.BASE_URL==='/game/';
+    if(next.implemented)return{ready:true,next,href:levelHref(next,website),label:`Start chapter ${String(next.chapter).padStart(2,'0')} ↗`};
     return{ready:false,next,href:website?'/map/index.html':`?level=${next.route}`,label:'Back to your journey ↗'};
   }
   private finish(){

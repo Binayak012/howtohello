@@ -3,7 +3,7 @@ import './unpacking.css';
 import * as THREE from 'three';
 import {ArrivalScene} from './arrival-scene';
 import {colors,colorOrder,items,checks,initialUnpack,see,canStartUnpacking,pick,answer,currentItem,unpacked,checked,type ColorId,type ItemId,type UnpackState} from './unpack-state';
-import {completeLevel,journey} from './progression';
+import {completeLevel,levelHref,nextLevel} from './progression';
 
 type Phase='intro'|'study'|'unpack'|'check'|'complete';
 type Point=[number,number,number];
@@ -106,13 +106,13 @@ class UnpackingGame{
     this.panel.innerHTML=`<header><span class="arrival-eyebrow">QUICK CHECK · ${this.state.check+1} OF 3</span></header><h2 id="unpack-title" tabindex="-1">What color is ${question.label}?</h2><p>Asha points across the room.</p><div class="arrival-answers">${question.options.map(color=>`<button data-answer="${color}">${this.word(color,false)}</button>`).join('')}</div><p class="unpack-status" role="status" aria-live="polite">${feedback}</p>`;
     this.layout();
   }
-  private nextStep(){const next=journey[2],website=import.meta.env.BASE_URL==='/game/';return{next,href:`${website?'/game/index.html':''}?level=${next.route}`};}
+  private nextStep(){const next=nextLevel('second-lesson')!;return{next,href:levelHref(next,import.meta.env.BASE_URL==='/game/')};}
   private finish(){
     this.setPhase('complete');this.panel.hidden=true;this.homeView();let saved=false;
     try{saved=completeLevel(localStorage,'second-lesson');}catch{/* Completion still shows without storage. */}
     const {next,href}=this.nextStep(),chapter=String(next.chapter).padStart(2,'0');
     this.overlay.hidden=false;
-    this.overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 02 · COMPLETE</p><h2 id="arrival-title">Your room, your colors.</h2><p>Everything has a place, and you can name every color.</p><ul class="arrival-words unpack-words" aria-label="Five colors you used">${colorOrder.map(color=>`<li>${this.dot(color)}<strong lang="ne">${colors[color].word}</strong><span class="arrival-roman" lang="ne-Latn">${colors[color].roman}</span></li>`).join('')}</ul><p class="arrival-stats"><strong>Five colors · ${this.state.misses} ${this.state.misses===1?'retry':'retries'}</strong></p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small><strong>${next.title}</strong><span>“Your kitchen is empty,” Asha laughs. “The little shop is just around the corner.”</span></div><a class="arrival-primary" href="${href}">Start chapter ${chapter} ↗</a><div class="arrival-card-actions"><button class="arrival-quiet" data-unpack="look">Look around</button><button class="arrival-quiet" data-unpack="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
+    this.overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 02 · COMPLETE</p><h2 id="arrival-title">Your room, your colors.</h2><p>Everything has a place, and you can name every color.</p><ul class="arrival-words unpack-words" aria-label="Five colors you used">${colorOrder.map(color=>`<li>${this.dot(color)}<strong lang="ne">${colors[color].word}</strong><span class="arrival-roman" lang="ne-Latn">${colors[color].roman}</span></li>`).join('')}</ul><p class="arrival-stats"><strong>Five colors · ${this.state.misses} ${this.state.misses===1?'retry':'retries'}</strong></p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small><strong>${next.title}</strong><span>Lila waves from the courtyard. She could use a hand with her apples.</span></div><a class="arrival-primary" href="${href}">Start chapter ${chapter} ↗</a><div class="arrival-card-actions"><button class="arrival-quiet" data-unpack="look">Look around</button><button class="arrival-quiet" data-unpack="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
     this.overlay.querySelector<HTMLAnchorElement>('a')!.focus({preventScroll:true});
   }
 
@@ -150,7 +150,7 @@ class UnpackingGame{
       if(action==='review'&&!this.pending){this.study();return;}
       if(action==='look'){
         this.overlay.hidden=true;this.app.dataset.phase='look';this.panel.hidden=false;const {next,href}=this.nextStep();
-        this.panel.innerHTML=`<header><span class="arrival-eyebrow">CHAPTER 02 · COMPLETE</span></header><h2 id="unpack-title" tabindex="-1">All unpacked.</h2><p>Drag to look around your room. When you’re ready, Asha will point you to ${next.title}.</p><a class="arrival-primary" href="${href}">Start chapter ${String(next.chapter).padStart(2,'0')} ↗</a>`;this.layout();return;
+        this.panel.innerHTML=`<header><span class="arrival-eyebrow">CHAPTER 02 · COMPLETE</span></header><h2 id="unpack-title" tabindex="-1">All unpacked.</h2><p>Drag to look around your room. When you’re ready, ${next.title} is next.</p><a class="arrival-primary" href="${href}">Start chapter ${String(next.chapter).padStart(2,'0')} ↗</a>`;this.layout();return;
       }
       if(button.dataset.item){this.choose(button.dataset.item as ItemId);return;}
       if(button.dataset.answer){this.respond(button.dataset.answer as ColorId);return;}

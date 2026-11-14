@@ -1,7 +1,7 @@
 /** Clay-style double doors, opening onto the supplied shop artwork. */
 export const unitDoorMarkup = `<div class="unit-portal" aria-hidden="true">
   <span class="portal-speck portal-speck-one">✦</span><span class="portal-speck portal-speck-two">✧</span><span class="portal-speck portal-speck-three">✦</span>
-  <div class="portal-plaque"><span>01</span> BASIC</div>
+  <div class="portal-plaque"><span>04</span> LETTERS</div>
   <div class="portal-frame"><div class="portal-opening">
     <div class="portal-world"><img src="/assets/shop-scene-laptop.svg" alt=""><span class="portal-sunlight"></span></div>
     <div class="portal-light"></div>

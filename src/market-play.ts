@@ -1,7 +1,7 @@
 import type { ShopScene } from './scene';
 import { numbers } from './numbers';
 import { completeLevel } from './progression';
-import { marketActivities, marketStart, nearbyActivity, walkMarket, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
+import { marketActivities, pickColors, marketStart, nearbyActivity, walkMarket, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
 
 /** Street movement and conversations are independent of the shop's tile lesson. */
 export class MarketExplorer {
@@ -118,7 +118,7 @@ export class MarketExplorer {
     if(action==='review'){this.review();return;}
     if(button===this.prompt){this.interact();return;}
     if(action==='leave'){this.closeConversation();return;}
-    if(action==='task-pick'){this.pickWorldItem();return;}
+    if(action==='task-pick'){this.pickWorldItem(button.dataset.pick==='wrong'&&this.activeTask?`${this.activeTask}-wrong-0`:undefined);return;}
     if(action==='task-return'){this.returnOne();return;}
     if(action==='coin-add'){this.changeCoins(1);return;}
     if(action==='coin-remove'){this.changeCoins(-1);return;}
@@ -131,7 +131,7 @@ export class MarketExplorer {
       if(conversation.activity.id==='family'&&this.tasks.get('family')?.carryingToy){this.activeTask='family';this.deliverTask();return;}
       conversation.stage=this.completed.has(conversation.activity.id)?'done':'brief';this.renderConversation();return;
     }
-    if(action==='wrong-greeting'){this.dialogue.querySelector('[role=status]')!.textContent='अगाडि means forward. Greet your neighbor with नमस्ते (namaste), just as you did at the shop.';return;}
+    if(action==='wrong-greeting'){this.dialogue.querySelector('[role=status]')!.textContent='अगाडि means forward. Greet your neighbor with नमस्ते (namaste), just as you did with Asha on your first day.';return;}
     if(action==='start-task'&&conversation.stage==='brief'){
       const id=conversation.activity.id;
       if(!this.tasks.has(id))this.tasks.set(id,{id,picked:[],coins:0,carryingToy:false});
@@ -161,7 +161,7 @@ export class MarketExplorer {
     const conversation=this.conversation!;const {activity,stage}=conversation;const number=numbers[activity.count-1];
     this.dialogue.hidden=false;
     let content=`<header><span class="eyebrow">${activity.person}</span><button class="quiet" data-market-action="leave">Leave conversation</button></header><h2 id="market-dialogue-title" tabindex="-1">${stage==='greet'?'A familiar first word.':stage==='brief'?activity.id==='family'?'A missing friend.':'A little help at the stall.':stage==='thanks'?'Just right. Thank you!':'A little more at home.'}</h2>`;
-    if(stage==='greet')content+=`<p>${this.completed.has(activity.id)?'“Good to see you again!”':'Your neighbor smiles. Start with the greeting you learned in the shop.'}</p><div class="market-replies"><button class="primary phrase-reply" data-market-action="greet"><strong lang="ne">नमस्ते</strong><span class="latin-guide">namaste</span><small>Hello</small></button><button class="quiet phrase-reply" data-market-action="wrong-greeting"><strong lang="ne">अगाडि</strong><span class="latin-guide">agadi</span><small>Forward</small></button></div>`;
+    if(stage==='greet')content+=`<p>${this.completed.has(activity.id)?'“Good to see you again!”':'Your neighbor smiles. Start with the greeting you learned on your first day.'}</p><div class="market-replies"><button class="primary phrase-reply" data-market-action="greet"><strong lang="ne">नमस्ते</strong><span class="latin-guide">namaste</span><small>Hello</small></button><button class="quiet phrase-reply" data-market-action="wrong-greeting"><strong lang="ne">अगाडि</strong><span class="latin-guide">agadi</span><small>Forward</small></button></div>`;
     else if(stage==='brief'){
       content+=`<p>${conversation.message??activity.request}</p>`;
       if(activity.id==='family')content+='<div class="market-direction-note"><strong lang="ne">दायाँ → पछाडि</strong><span class="latin-guide">daaya → pachhadi</span><small>Face the shop → right toward the bakery → behind the planter</small></div><p>Find the red teddy in the street and bring it back. You can look down and pick it up.</p>';
@@ -176,6 +176,12 @@ export class MarketExplorer {
     const dx=lostToy.x-this.pose.x,dz=lostToy.z-this.pose.z,distance=Math.hypot(dx,dz);
     return distance<2.3&&(-Math.sin(this.pose.yaw)*dx-Math.cos(this.pose.yaw)*dz)/Math.max(.01,distance)>.15;
   }
+  /** Two pick buttons that show only a color swatch, so the learner must know which color the Nepali word names. */
+  private pickButtons(id:'fruit'|'flowers'|ActivityId){
+    const colors=pickColors[id as 'fruit'|'flowers'],noun=id==='fruit'?'apple':'flower';
+    const button=(kind:'right'|'wrong')=>`<button class="quiet market-swatch-pick" data-market-action="task-pick" data-pick="${kind}" data-task-near aria-label="Pick up a ${kind==='right'?colors.english:colors.otherEnglish} ${noun}"><i style="--swatch:${kind==='right'?colors.hex:colors.other}" aria-hidden="true"></i>Pick up</button>`;
+    return id==='fruit'?button('wrong')+button('right'):button('right')+button('wrong');
+  }
   private atTask(){return !!this.activeTask&&nearbyActivity(this.pose)?.id===this.activeTask;}
   private renderTask(){
     const task=this.activeTask?this.tasks.get(this.activeTask):undefined;this.taskBoard.hidden=!task;if(!task)return;
@@ -184,7 +190,7 @@ export class MarketExplorer {
     if(task.delivered)content+='<p>Your order is ready. Speak to the vendor to finish the exchange.</p><button class="primary" data-market-action="task-give" data-task-near>Speak to the vendor</button>';
     else if(task.id==='family')content+=task.carryingToy?'<p>You’re holding the red teddy. Take it back to the family.</p><button class="primary" data-market-action="task-give" data-task-near>Return the teddy ↗</button>':'<p>Face the shop. Go <strong>right · दायाँ</strong> toward the bakery. Look <strong>behind · पछाडि</strong> the planter past it.</p><button class="primary" data-market-action="toy-pick">Pick up the red teddy</button>';
     else if(task.id==='bread')content+=`<p>Price: <strong lang="ne">तीन</strong> <span class="latin-guide">(teen)</span> rupees</p><div class="coin-purse" aria-label="Coin purse">${Array.from({length:this.wallet},(_,i)=>`<button class="rupee-coin ${i<task.coins?'is-placed':''}" data-market-action="coin-add" data-task-near data-fixed-disabled="${i<task.coins}" aria-label="Place one rupee" ${i<task.coins?'disabled':''}><span>रू</span><strong>1</strong></button>`).join('')}</div><p id="coin-total">${task.coins} coins on the counter · ${this.wallet-task.coins} in your purse</p><div class="task-buttons"><button class="quiet" data-market-action="coin-remove" data-task-near>Take back a coin</button><button class="primary" data-market-action="task-give" data-task-near>Pay the baker ↗</button></div>`;
-    else content+=`<p>Pick <strong lang="ne">${numbers[activity.count-1].word}</strong> <span class="latin-guide">(${numbers[activity.count-1].roman})</span> ${activity.item}${task.id==='flowers'?' from the vase on your left · बायाँ':''}. Click them on the counter or use Pick up.</p><p class="task-inventory" id="picked-total">${task.picked.length} ${activity.item} in your hands</p><div class="task-buttons"><button class="quiet" data-market-action="task-pick" data-task-near>Pick up ${task.id==='fruit'?'an apple':'a flower'}</button><button class="quiet" data-market-action="task-return" data-task-near>Put one back</button><button class="primary" data-market-action="task-give" data-task-near>Hand over ↗</button></div>`;
+    else content+=`<p>Pick <strong lang="ne">${numbers[activity.count-1].word} ${pickColors[task.id].word}</strong> <span class="latin-guide">(${numbers[activity.count-1].roman} ${pickColors[task.id].roman})</span> ${activity.item}${task.id==='flowers'?' from the vase on your left · बायाँ':''}. Click them on the counter or use the buttons.</p><p class="task-inventory" id="picked-total">${task.picked.length} ${activity.item} in your hands</p><div class="task-buttons">${this.pickButtons(task.id)}<button class="quiet" data-market-action="task-return" data-task-near>Put one back</button><button class="primary" data-market-action="task-give" data-task-near>Hand over ↗</button></div>`;
     content+='<p class="task-distance-note">Walk up to the person or counter to act. You can leave and come back.</p>';this.taskBoard.innerHTML=content;
   }
   private pickWorldItem(key?:string){
@@ -200,7 +206,9 @@ export class MarketExplorer {
     const task=this.activeTask?this.tasks.get(this.activeTask):undefined;
     if(!task||(task.id!=='fruit'&&task.id!=='flowers')||!this.atTask())return;
     if(task.delivered)return;
-    if(key?.startsWith('flowers-wrong')){this.status.textContent='Those flowers are on your right. Tara pointed to the left vase · बायाँ.';this.scene?.market.react('flowers','point',this.pose);return;}
+    // Distractors teach the color word: say what was picked and what was asked for.
+    if(key?.startsWith('flowers-wrong')){this.status.textContent='Those are सेतो (white) flowers, on your right. Tara asked for पहेँलो (yellow) ones from the left vase · बायाँ.';this.scene?.market.react('flowers','point',this.pose);return;}
+    if(key?.startsWith('fruit-wrong')){this.status.textContent='That apple is हरियो (green). Maya asked for रातो (red) apples.';this.scene?.market.react('fruit','point',this.pose);return;}
     if(task.picked.length>=5){this.status.textContent='Your hands are full. Hand these over or put one back.';return;}
     const item=key??this.scene?.market.availableItem(task.id)??`${task.id}-${task.picked.length}`;
     if(!item.startsWith(`${task.id}-`)||task.picked.includes(item))return;

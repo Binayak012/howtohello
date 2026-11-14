@@ -23,7 +23,7 @@ const practice: Move[] = ['right', 'left', 'forward', 'backward'];
 const app = document.querySelector<HTMLDivElement>('#app')!;
 try { recordLanguageStarted(localStorage, 'ne'); } catch { /* Optional browser-local learning history. */ }
 app.innerHTML = `
-  <header class="masthead"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · CHAPTER 03</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
+  <header class="masthead"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · CHAPTER 05</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
     <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="round" aria-label="Show a navigation hint">?</button></div>
@@ -33,7 +33,7 @@ app.innerHTML = `
     <section id="welcome" class="welcome" role="dialog" aria-modal="false" aria-labelledby="welcome-title"><div id="intro-card" class="welcome-card"></div></section>
     <div id="market-journey" class="market-journey" hidden><div class="market-letterbox top"></div><div class="market-letterbox bottom"></div><div class="market-caption" role="status"><span>A NEW NEIGHBORHOOD</span><h2>The world is waking up.</h2><p>A little braver. A little more at home.</p></div><button id="skip-journey" type="button">Continue <span aria-hidden="true">↗</span></button></div>
     <div id="results" class="results" hidden></div>
-    <section id="market-arrival" class="market-arrival" aria-labelledby="market-title" hidden><p class="eyebrow">CHAPTER 04 · FINALE · COUNTING AT THE MARKET</p><h2 id="market-title">The morning market.</h2><p>A few numbers. A basket full of possibility.</p><p class="market-preview-note">First, learn Nepali numbers 1–5. Then try them with the fruit vendor.</p><button id="market-learn" class="primary">Learn numbers 1–5 ↗</button><button id="market-replay" class="quiet">Replay the shop</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet" href="/map/index.html">Back to your map ↗</a>' : ''}</section>
+    <section id="market-arrival" class="market-arrival" aria-labelledby="market-title" hidden><p class="eyebrow">CHAPTER 06 · FINALE · EVERYTHING TOGETHER</p><h2 id="market-title">The morning market.</h2><p>Everything you’ve learned, all on one street.</p><ul class="finale-topics" aria-label="What this finale reviews"><li><strong lang="ne">नमस्ते</strong><small>Greet every seller</small></li><li><strong lang="ne">रातो · पहेँलो</strong><small>Find the right colors</small></li><li><strong lang="ne">दुई · तीन · चार</strong><small>Count and pay</small></li><li><strong lang="ne">बायाँ · दायाँ</strong><small>Follow directions</small></li></ul><button id="market-learn" class="primary">Start exploring ↗</button><button id="market-replay" class="quiet">Replay the shop</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet" href="/map/index.html">Back to your map ↗</a>' : ''}</section>
     <section id="numbers-lesson" class="numbers-lesson" role="dialog" aria-modal="false" aria-labelledby="numbers-title" hidden></section>
     <section id="market-roam" class="market-exploration" aria-label="Explore the market" hidden></section>
   </section>
@@ -81,7 +81,7 @@ function directionCards() {
 function showStory() {
   el('welcome').hidden = false;
   el('intro-card').classList.remove('word-lesson');
-  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 03 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is opening for the day, and you have a short list.</p><blockquote>“Namaste! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper" aria-pressed="false"><strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary" disabled>Learn the four words ↗</button><small class="welcome-keys">Say hello → learn → shop → meet the neighborhood</small>`;
+  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 05 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is opening for the day, and you have a short list.</p><blockquote>“Namaste! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper" aria-pressed="false"><strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary" disabled>Learn the four words ↗</button><small class="welcome-keys">Say hello → learn → shop → meet the neighborhood</small>`;
   el('shop-greeting').onclick = () => {
     scene?.greetShopkeeper();
     el('shop-greeting').setAttribute('aria-pressed','true');
@@ -117,7 +117,7 @@ function navigationMove(): Move {
 }
 function render() {
   app.dataset.phase = phase;
-  document.querySelector<HTMLElement>('.chapter')!.textContent = phase === 'market' ? 'THE MORNING MARKET · CHAPTER 04 · FINALE' : 'THE LITTLE SHOP · CHAPTER 03';
+  document.querySelector<HTMLElement>('.chapter')!.textContent = phase === 'market' ? 'THE MORNING MARKET · CHAPTER 06 · FINALE' : 'THE LITTLE SHOP · CHAPTER 05';
   document.querySelector<HTMLElement>('.game')!.setAttribute('aria-label', phase === 'market' ? 'Morning market number lesson' : 'Shop language lesson');
   const inStore = ['practice','shop','checkout','scanning','collect','exit'].includes(phase);
   radio.setInside(inStore);
@@ -326,10 +326,11 @@ function openNumberLesson() {
   }, () => {
     numberLesson?.dispose(); numberLesson = undefined;
     if(explorer || numberLearned) startExploring();
-    else {el('market-arrival').hidden = false; el('market-learn').focus();}
+    else startExploring();
   });
 }
-el('market-learn').onclick=openNumberLesson;
+// Numbers are taught in chapter 3, so the finale opens straight into the street; the explorer can still open them for review.
+el('market-learn').onclick=()=>{numberLearned=true;try{localStorage.setItem(learnedNumbersKey,'true');}catch{/* Optional local progress. */}startExploring();};
 function finish() {
   // The shop finishes inside, with the packed bag, before the door opens.
   if (phase !== 'exit' || !atShopDoor(player)) return;
@@ -340,7 +341,7 @@ function finish() {
   const mastered = outcomes.filter(outcome => !outcome.misses && !outcome.helped).length;
   const celebration = Array.from({ length: 16 }, (_, i) => `<i style="--angle:${i * 22.5}deg;--distance:${54 + i % 3 * 14}px;--delay:${i % 4 * 45}ms">${i % 3 ? '✦' : '●'}</i>`).join('');
   el('results').hidden = false;
-  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 03 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and packed your shopping. A new adventure waits beyond the door.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="next-level" class="primary">Next level <span aria-hidden="true">↗</span></button><button id="again" class="quiet">Play the story again</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
+  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 05 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and packed your shopping. A new adventure waits beyond the door.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="next-level" class="primary">Next level <span aria-hidden="true">↗</span></button><button id="again" class="quiet">Play the story again</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
   el('next-level').onclick = beginDeparture;
   el('again').onclick = restart; el('next-level').focus(); say('A little more at home.', 'Four words you’ve put into practice. Choose Next level when you’re ready to step outside.');
 

@@ -1,21 +1,23 @@
 import {mapNatureMarkup} from './map-nature';
-import {isBasicUnlocked} from '../../src/unit-unlock';
 import {recordLanguageStarted} from '../../src/learning-history';
-import {completedLevels,isUnlocked,journey} from '../../src/progression';
+import {completedLevels,isUnlocked,journey,levelHref} from '../../src/progression';
+
+const ctas:Record<string,string>={'moving-in':'Start this quest','second-lesson':'Unpack your things',counting:'Learn to count',letters:'Start tracing','little-shop':'Run your errand','next-adventure':'Play the finale'};
 
 export function renderLevelMap(app:HTMLDivElement,brand:string){
   let completed:ReturnType<typeof completedLevels>=[],canSave=true;
   try{localStorage.setItem('wayword.storage-check','1');localStorage.removeItem('wayword.storage-check');completed=completedLevels(localStorage);recordLanguageStarted(localStorage,'ne');}catch{canSave=false;}
-  let basicOpen=completed.length>0;try{basicOpen ||= isBasicUnlocked(localStorage);}catch{}try{basicOpen ||= isBasicUnlocked(sessionStorage);}catch{}
-  const positions=[{x:43,y:77},{x:70,y:54},{x:30,y:31},{x:61,y:8}];
-  app.innerHTML=`<a class="skip" href="#map-main">Skip to content</a><header class="nav wrap">${brand}<a class="map-language" href="/languages/index.html"><span aria-hidden="true">🇳🇵</span> नेपाली <span>Change language ↗</span></a></header><main id="map-main" class="map-page wrap"><h1 class="sr-only">Your lesson map</h1><a class="journey-basic-link" href="/unit/index.html">${basicOpen?'Practice Nepali letters':'Start with five Nepali letters'} ↗</a><p class="journey-map-intro">A new neighborhood. Four chapters. Your own story.</p><section class="quest-map journey-map" aria-label="Your four-chapter journey, starting at the bottom"><div class="map-terrain" aria-hidden="true">${mapNatureMarkup}</div><svg class="map-trail" aria-hidden="true"><path fill="none" stroke="#fffaf0" stroke-width="28" stroke-linecap="round"/><path fill="none" stroke="#cbbca2" stroke-width="5" stroke-dasharray="2 17" stroke-linecap="round"/></svg>${journey.map((level,index)=>{
+  // Six stops zig-zagging up the map, chapter 1 at the bottom.
+  const positions=[{x:42,y:82},{x:68,y:66},{x:31,y:51},{x:67,y:36},{x:32,y:21},{x:60,y:5}];
+  const count=journey.length,last=count-1;
+  app.innerHTML=`<a class="skip" href="#map-main">Skip to content</a><header class="nav wrap">${brand}<a class="map-language" href="/languages/index.html"><span aria-hidden="true">🇳🇵</span> नेपाली <span>Change language ↗</span></a></header><main id="map-main" class="map-page wrap"><h1 class="sr-only">Your lesson map</h1><p class="journey-map-intro">A new neighborhood. Six chapters. Your own story.</p><section class="quest-map journey-map" aria-label="Your ${count}-chapter journey, starting at the bottom"><div class="map-terrain" aria-hidden="true">${mapNatureMarkup}</div><svg class="map-trail" aria-hidden="true"><path fill="none" stroke="#fffaf0" stroke-width="28" stroke-linecap="round"/><path fill="none" stroke="#cbbca2" stroke-width="5" stroke-dasharray="2 17" stroke-linecap="round"/></svg>${journey.map((level,index)=>{
     const unlocked=isUnlocked(level.id,completed),finished=completed.includes(level.id),playable=unlocked&&level.implemented;
-    const href=level.id==='moving-in'&&!basicOpen?'/unit/index.html':`/game/index.html?level=${level.route}`;
-    const title=index===3?'FINALE':`CHAPTER ${String(level.chapter).padStart(2,'0')}`;
+    const href=levelHref(level,true);
+    const title=index===last?'FINALE':`CHAPTER ${String(level.chapter).padStart(2,'0')}`;
     const node=playable?`<a class="level-node playable ${finished?'completed':''}" href="${href}" aria-label="${finished?'Replay':'Play'} level ${level.chapter}, ${level.title}">${finished?'✓':String(level.chapter).padStart(2,'0')}</a>`:`<button class="level-node ${unlocked?'future':'locked'}" disabled aria-label="Level ${level.chapter}, ${unlocked?'coming next':'locked'}">${String(level.chapter).padStart(2,'0')}</button>`;
-    const cta=level.id==='moving-in'&&!basicOpen?'Unlock Basic':finished?'Play again':level.id==='moving-in'?'Start this quest':level.id==='next-adventure'?'Learn to count':'Start this quest';
-    return `<div class="map-level journey-level-${index+1}" style="left:${positions[index].x}%;top:${positions[index].y}%">${node}<div class="level-label"><small>${title} · ${finished?'COMPLETE':!level.implemented?'COMING NEXT':unlocked?level.id==='moving-in'&&!basicOpen?'LETTERS FIRST':'READY TO PLAY':'LOCKED'}</small><strong>${level.title}</strong><p>${level.subtitle}</p>${playable?`<a class="button primary" href="${href}">${cta} <span aria-hidden="true">↗</span></a>`:!level.implemented?'<span class="journey-coming">Reserved for the next lesson</span>':''}</div></div>`;
-  }).join('')}</section><p class="map-progress-note">${canSave?'Progress saved on this browser':'Progress saving unavailable'} · Four chapters · The market is the finale</p></main>`;
+    const cta=finished?'Play again':ctas[level.id]??'Start this quest';
+    return `<div class="map-level journey-level-${index+1}" style="left:${positions[index].x}%;top:${positions[index].y}%">${node}<div class="level-label"><small>${title} · ${finished?'COMPLETE':!level.implemented?'COMING NEXT':unlocked?'READY TO PLAY':'LOCKED'}</small><strong>${level.title}</strong><p>${level.subtitle}</p>${playable?`<a class="button primary" href="${href}">${cta} <span aria-hidden="true">↗</span></a>`:''}</div></div>`;
+  }).join('')}</section><p class="map-progress-note">${canSave?'Progress saved on this browser':'Progress saving unavailable'} · Six chapters · The market is the finale</p></main>`;
   const map=app.querySelector<HTMLElement>('.quest-map')!,trail=app.querySelector<SVGSVGElement>('.map-trail')!;
   const align=()=>{const bounds=map.getBoundingClientRect(),nodes=[...map.querySelectorAll('.level-node')].map(node=>{const rect=node.getBoundingClientRect();return{x:rect.left+rect.width/2-bounds.left,y:rect.top+rect.height/2-bounds.top};});trail.setAttribute('viewBox',`0 0 ${bounds.width} ${bounds.height}`);let path=`M${nodes[0].x} ${nodes[0].y}`;for(let i=1;i<nodes.length;i++){const a=nodes[i-1],b=nodes[i],gap=(a.y-b.y)/2;path+=` C${a.x} ${a.y-gap} ${b.x} ${b.y+gap} ${b.x} ${b.y}`;}trail.querySelectorAll('path').forEach(element=>element.setAttribute('d',path));};
   const observer=new ResizeObserver(align);observer.observe(map);align();
@@ -53,7 +55,8 @@ export function renderLevelMap(app:HTMLDivElement,brand:string){
     [...trail.children].forEach(child => trailGroup!.append(child));
     trail.append(mask, trailGroup);
     animate(revealPath, [{ strokeDashoffset: '1' }, { strokeDashoffset: '0' }], { duration: 1150, delay: 100, easing: 'cubic-bezier(.4,0,.2,1)' });
-    [1, 2, 3, 4].forEach((level, index) => {
+    journey.forEach((_, index) => {
+      const level = index + 1;
       const delay = 180 + index * 280;
       animate(map.querySelector(`.journey-level-${level} .level-node`)!, [
         { opacity: 0, transform: 'rotate(-16deg) scale(.25)', offset: 0 },

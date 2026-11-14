@@ -42,6 +42,25 @@ async function thankAndLeave(page:Page,id:string){
   await page.getByRole('button',{name:'Keep exploring'}).click();
 }
 
+test('the fruit stall is a real color test: green apples are rejected, red ones accepted',async({page})=>{
+  test.setTimeout(120000);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.addInitScript(()=>{localStorage.setItem('wayword.progress.ne.v1','["little-shop"]');localStorage.setItem('wayword.numbers.ne.v1','true');});
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/?level=market');
+  await expect(page.locator('#market-roam')).toBeVisible();
+  await walkTo(page,1.2,10.5);await walkTo(page,11.2,10.5);await walkTo(page,11.2,7.8);await startTask(page,11.2,5.35,'Let me help');
+  await expect(page.locator('.market-task')).toContainText('दुई रातो');
+  await page.screenshot({path:'test-results/market-color-test.png'});
+  await page.getByRole('button',{name:'Pick up a green apple',exact:true}).click();
+  await expect(page.locator('.market-roam-status')).toContainText('हरियो');
+  await expect(page.locator('#picked-total')).toContainText('0 apples');
+  for(let i=0;i<2;i++)await page.getByRole('button',{name:'Pick up a red apple',exact:true}).click();
+  await expect(page.locator('#picked-total')).toContainText('2 apples');
+  await page.getByRole('button',{name:'Hand over',exact:false}).click();await thankAndLeave(page,'fruit-color');
+  expect(errors).toEqual([]);
+});
+
 test('walk to neighbors, pick real items, pay coins and find the child’s toy',async({page})=>{
   test.setTimeout(210000);
   await page.emulateMedia({reducedMotion:'reduce'});
@@ -89,11 +108,14 @@ test('walk to neighbors, pick real items, pay coins and find the child’s toy',
   await page.screenshot({path:'test-results/market-flower-target.png'});
   await page.mouse.click(target.x,target.y);
   await expect(page.locator('.market-roam-status')).toContainText('on your right');
-  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Pick up a flower',exact:true}).click();
+  await page.getByRole('button',{name:'Pick up a white flower',exact:true}).click();await expect(page.locator('.market-roam-status')).toContainText('सेतो');
+  for(let i=0;i<4;i++)await page.getByRole('button',{name:'Pick up a yellow flower',exact:true}).click();
   await expect(page.locator('#picked-total')).toContainText('4 flowers');
   await page.getByRole('button',{name:'Hand over',exact:false}).click();await thankAndLeave(page,'flowers');
   await walkTo(page,11.2,10.5);await walkTo(page,11.2,7.8);await startTask(page,11.2,5.35,'Let me help');
-  for(let i=0;i<3;i++)await page.getByRole('button',{name:'Pick up an apple',exact:true}).click();
+  await expect(page.locator('.market-task')).toContainText('रातो');
+  await page.getByRole('button',{name:'Pick up a green apple',exact:true}).click();await expect(page.locator('.market-roam-status')).toContainText('हरियो');await expect(page.locator('#picked-total')).toContainText('0 apples');
+  for(let i=0;i<3;i++)await page.getByRole('button',{name:'Pick up a red apple',exact:true}).click();
   await page.getByRole('button',{name:'Hand over',exact:false}).click();
   await expect(page.locator('.market-dialogue')).toContainText('You brought 3');
   await page.getByRole('button',{name:'Let me help'}).click();

@@ -28,7 +28,7 @@ for(const phone of[false,true])test(`${phone?'phone':'desktop'}: learn five colo
   await page.waitForTimeout(900);await page.screenshot({path:`test-results/${phone?'phone':'desktop'}-unpack-complete.png`});
   expect(errors).toEqual([]);
   await page.getByRole('link',{name:'Start chapter 03'}).click();
-  await expect(page).toHaveURL(/level=shop$/);await expect(page.locator('#app')).not.toHaveAttribute('data-phase','locked');
+  await expect(page).toHaveURL(/level=counting$/);await expect(page.getByRole('heading',{name:'Counting with Lila.'})).toBeVisible();
 });
 
 test('chapter two stays locked until Your First Hello is complete',async({page})=>{

@@ -1,14 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 for (const phone of [false, true]) {
-  test(`${phone ? 'phone' : 'desktop'}: learn numbers before matching and freely exploring`, async ({ page }) => {
+  test(`${phone ? 'phone' : 'desktop'}: the finale opens on a four-topic review, and numbers stay reviewable while exploring`, async ({ page }) => {
     if (phone) await page.setViewportSize({ width:390, height:844 });
     await page.emulateMedia({ reducedMotion:'reduce' });
     await page.addInitScript(() => localStorage.setItem('wayword.progress.ne.v1', '["little-shop"]'));
     const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto('/?level=market');
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market');
-    await page.getByRole('button', { name:'Learn numbers 1–5' }).click();
+    // Numbers are taught in chapter 3; the finale reviews greetings, colors, numbers and directions.
+    await expect(page.locator('#market-arrival')).toContainText('CHAPTER 06 · FINALE');
+    await expect(page.locator('.finale-topics li')).toHaveCount(4);
+    await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-finale-review.png` });
+    await page.getByRole('button', { name:'Start exploring' }).click();
+    await expect(page.locator('#market-roam')).toHaveAttribute('data-mode','roam');
+    await page.getByRole('button', { name:'Review numbers 1–5' }).click();
     const lesson = page.locator('#numbers-lesson');
     await expect(lesson).toHaveAttribute('data-stage', 'learn');
     await expect(page.getByRole('button', { name:'Hand over basket' })).toHaveCount(0);
@@ -46,8 +52,8 @@ for (const phone of [false, true]) {
     if(phone){const box=(await page.getByRole('button',{name:'Walk forward',exact:true}).boundingBox())!;await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(450);await page.mouse.up();}
     else{await page.keyboard.down('w');await page.waitForTimeout(450);await page.keyboard.up('w');}
     expect(Number(await page.locator('#market-roam').getAttribute('data-market-x'))).toBeGreaterThan(before+.5);
-    await page.getByRole('button', { name:'Review numbers 1–5' }).click();
-    await expect(lesson).toHaveAttribute('data-stage', 'learn');
+    await page.reload();
+    await expect(page.locator('#market-roam')).toHaveAttribute('data-mode','roam', { timeout:15000 });
     await page.getByRole('button', { name:'Start over' }).click();
     await expect(lesson).toBeHidden();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'story');

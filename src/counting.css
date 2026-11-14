@@ -1,0 +1,19 @@
+/* Chapter 3 builds on the chapter 1–2 styles (moving-in.css, unpacking.css). */
+.count-apples{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:4px 0}
+.count-apples i{display:block;width:26px;height:26px}.count-apples svg{width:100%;height:100%}
+.arrival-card .count-apples{margin:18px 0 4px}.arrival-card .count-apples i{width:34px;height:34px}
+.count-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:14px 0}
+.count-tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px;border-radius:16px;background:#f5ecdc;border:2px solid transparent}
+.count-tabs b{font-size:20px;line-height:1.2}.count-tabs span{font:600 14px/1.3 var(--font-target);color:var(--muted)}
+.count-tabs button.seen{background:var(--lavtint)}
+.count-tabs button[aria-pressed=true]{border-color:var(--teal);background:#fffaf0}
+.count-card{gap:4px!important}
+.count-numerals{display:flex;justify-content:center;gap:14px;align-items:baseline}.count-numerals b{font-size:30px}.count-numerals span{font:700 28px/1.2 var(--font-target);color:var(--teal-d)}
+.count-basket{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f5ecdc;border-radius:18px;padding:10px 14px;margin:14px 0 10px;min-height:56px}
+.count-basket-label{font-size:10px;font-weight:800;letter-spacing:1px;color:var(--muted);text-transform:uppercase}
+.count-basket-number{font-size:24px;min-width:18px}
+.count-basket .count-apples{justify-content:flex-start;margin:0}.count-basket .count-apples i{width:22px;height:22px}
+.count-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.count-controls .arrival-primary{margin:0!important;flex:1 1 auto}
+.count-words li{flex-direction:column;gap:0;padding:5px 11px!important}.count-words b{font-size:11px;line-height:1.2;color:var(--muted)}.count-words strong{line-height:1.3!important}
+@media(max-width:560px){.count-tabs{gap:5px}.count-tabs b{font-size:17px}.count-controls .arrival-primary{flex-basis:100%}}

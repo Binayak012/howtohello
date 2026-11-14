@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { marketActivities, lostToy, type ActivityId } from './market-world';
+import { marketActivities, lostToy, pickColors, type ActivityId } from './market-world';
 
 // The street shares the shop's world: crossing the threshold never cuts scenes.
 export class GoldenMarket {
@@ -208,7 +208,8 @@ export class GoldenMarket {
     ctx.fillStyle='#376f61';ctx.beginPath();ctx.roundRect(0,0,512,128,18);ctx.fill();ctx.fillStyle='#fff5dc';ctx.font='bold 38px sans-serif';ctx.textAlign='center';ctx.fillText('THE LITTLE SHOP',256,80);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const labelMaterial=new THREE.SpriteMaterial({map:texture});const label=new THREE.Sprite(labelMaterial);label.position.set(9.85,3.1,26);label.scale.set(2.5,.625,1);this.root.add(label);this.resources.push(texture,labelMaterial);
   }
-  private teddy(parent:THREE.Object3D){
+  /** Builds the teddy model; shared by the street, the handover, the child and the player's hand. */
+  teddy(parent:THREE.Object3D){
     this.ball([.12,.15,.09],[0,.16,0],'#b95e4e',parent);this.ball([.13,.12,.1],[0,.36,0],'#c96b53',parent);
     this.ball([.075,.09,.02],[0,.16,.084],'#f1c599',parent);
     for(const side of [-1,1]){this.ball([.055,.055,.04],[side*.11,.45,0],'#b95e4e',parent);this.ball([.05,.1,.055],[side*.15,.2,0],'#c96b53',parent);this.ball([.06,.055,.08],[side*.08,.035,.02],'#b95e4e',parent);this.ball([.013,.016,.012],[side*.045,.38,.095],'#392d2c',parent);}
@@ -231,17 +232,29 @@ export class GoldenMarket {
   prepareItems(id:ActivityId){
     if([...this.taskItems.values()].some(item=>item.activity===id))return;
     const activity=marketActivities.find(item=>item.id===id)!;
+    if(id==='fruit'){
+      // Red apples (asked for) alternate with green distractors along the counter.
+      const colors=pickColors.fruit;
+      for(let slot=0;slot<7;slot++){
+        const right=slot%2===0,index=Math.floor(slot/2),key=right?`fruit-${index}`:`fruit-wrong-${index}`;
+        const item=new THREE.Group();item.name=`pick-${key}`;item.userData.marketItem=key;
+        item.position.set(14-6.05,1.04,activity.x+26-.9+slot*.3);
+        this.ball([.12,.12,.12],[0,.12,0],right?colors.hex:colors.other,item);this.box([.018,.07,.018],[0,.26,0],'#6d5139',item);
+        this.root.add(item);this.taskItems.set(key,{object:item,activity:id});
+      }
+      return;
+    }
     for(let i=0;i<5;i++){
       const item=new THREE.Group();item.name=`pick-${id}-${i}`;item.userData.marketItem=`${id}-${i}`;
       const z=activity.id==='flowers'?21.95:6.05;
       item.position.set(14-z,1.04,activity.x+26-.7+i*(id==='flowers'?.11:.35));
-      if(id==='flowers'){this.box([.025,.3,.025],[0,.16,0],'#678858',item);for(let petal=0;petal<5;petal++)this.ball([.07,.035,.07],[Math.sin(petal*1.256)*.06,.32,Math.cos(petal*1.256)*.06],i%2?'#c999bc':'#e8b881',item);}
+      if(id==='flowers'){this.box([.025,.3,.025],[0,.16,0],'#678858',item);for(let petal=0;petal<5;petal++)this.ball([.07,.035,.07],[Math.sin(petal*1.256)*.06,.32,Math.cos(petal*1.256)*.06],pickColors.flowers.hex,item);}
       else this.ball([.12,.12,.12],[0,.12,0],'#db7552',item);
       this.root.add(item);this.taskItems.set(`${id}-${i}`,{object:item,activity:id});
     }
     if(id==='flowers')for(let i=0;i<3;i++){
       const item=new THREE.Group();item.position.set(-7.95,1.04,activity.x+26+.45+i*.12);item.userData.marketItem=`flowers-wrong-${i}`;
-      this.box([.025,.3,.025],[0,.16,0],'#678858',item);this.ball([.08,.05,.08],[0,.32,0],'#e3b674',item);this.root.add(item);this.taskItems.set(`flowers-wrong-${i}`,{object:item,activity:id});
+      this.box([.025,.3,.025],[0,.16,0],'#678858',item);this.ball([.08,.05,.08],[0,.32,0],pickColors.flowers.other,item);this.root.add(item);this.taskItems.set(`flowers-wrong-${i}`,{object:item,activity:id});
     }
   }
   pickItem(key:string,player:{x:number;z:number}){
@@ -268,7 +281,8 @@ export class GoldenMarket {
     if(id==='family'){this.teddy(parcel);this.fly(parcel,new THREE.Vector3(14-player.z,1.05,player.x+26),new THREE.Vector3(6.2,.8,30.6));}
     else {
       this.box([.38,.3,.22],[0,.15,0],'#c8a56f',parcel);
-      for(let i=0;i<(id==='bread'?1:activity.count);i++)this.ball([.08,.07,id==='bread'?.2:.08],[(i%3-1)*.1,.33,Math.floor(i/3)*.1],id==='bread'?'#e1b679':activity.color,parcel);
+      const goods=id==='bread'?'#e1b679':id==='fruit'||id==='flowers'?pickColors[id].hex:activity.color;
+      for(let i=0;i<(id==='bread'?1:activity.count);i++)this.ball([.08,.07,id==='bread'?.2:.08],[(i%3-1)*.1,.33,Math.floor(i/3)*.1],goods,parcel);
       const counter=new THREE.Vector3(14-activity.z,1.25,activity.x+26),hands=new THREE.Vector3(14-player.z,1.1,player.x+26);
       if(id==='bread'){
         this.coinPile.children.forEach(coin=>{this.fly(coin,coin.position,counter);coin.visible=false;});

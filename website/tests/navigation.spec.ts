@@ -25,13 +25,8 @@ test('home, auth, language selection, map and game connect on one origin', async
   await expect(page).toHaveURL(/\/languages\/index.html$/);
   await page.locator('#language-continue').click();
   await expect(page).toHaveURL(/\/map\/index.html$/);
-  await page.getByRole('link', { name: 'Unlock Basic', exact:false }).click();
-  await page.locator('#tutorial-skip').click();
-  await page.getByText('Use a keyboard instead', {exact:true}).click();
-  await page.getByLabel('Enter the five letters in order').fill('अ आ इ ई उ');
-  await page.getByRole('button', {name:'Unlock Basic',exact:false}).click();
-  await page.getByRole('button', {name:'Step inside',exact:false}).click();
-  await page.locator('.basic-lessons').getByRole('link', {name:'Let’s play',exact:false}).click();
+  // Letter tracing is chapter 4 now, so chapter 1 starts straight from the map.
+  await page.locator('.journey-level-1 .level-label').getByRole('link', { name: 'Start this quest', exact:false }).click();
   await expect(page).toHaveURL(/\/game\/index.html\?level=moving-in$/);
   await expect(page.getByRole('heading', { name: 'Your first hello.' })).toBeVisible();
   await page.getByRole('link', { name: 'Wayword home' }).click();
@@ -51,23 +46,30 @@ test('direct route entry and reduced-motion navigation work', async ({ page }) =
     if (path === '/auth/') await expect(page.locator('#auth-title')).toHaveText('Welcome back.');
     if (path === '/languages/') await expect(page.locator('#language-form')).toBeVisible();
     if (path === '/map/') await expect(page.locator('.quest-map')).toBeVisible();
-    if (path === '/game/') {
-      await expect(page).toHaveURL(/\/unit\/index.html$/);
-      await expect(page.locator('.writing-tutorial')).toBeVisible();
-    }
+    if (path === '/game/') await expect(page.getByRole('heading', { name: 'Your first hello.' })).toBeVisible();
   }
 });
 
-test('the unlocked market opens its number introduction from the map', async ({ page }) => {
+test('the unlocked market finale opens on its review from the map', async ({ page }) => {
   await page.emulateMedia({ reducedMotion:'reduce' });
   await page.addInitScript(() => localStorage.setItem('wayword.progress.ne.v1', '["little-shop"]'));
   await page.goto('/map/');
-  await page.getByRole('link', { name:'Learn to count', exact:false }).click();
+  await page.getByRole('link', { name:'Play the finale', exact:false }).click();
   await expect(page).toHaveURL(/\/game\/index.html\?level=market$/);
   await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market');
-  await page.getByRole('button', { name:'Learn numbers 1–5' }).click();
-  await expect(page.locator('#numbers-lesson')).toHaveAttribute('data-stage', 'learn');
-  await expect(page.locator('.number-study .number-word')).toHaveText('एक');
+  await expect(page.locator('.finale-topics li')).toHaveCount(4);
+  await page.getByRole('button', { name:'Start exploring' }).click();
+  await expect(page.locator('#market-roam')).toHaveAttribute('data-mode', 'roam');
+});
+
+test('counting leads to the letters chapter on the tracing page', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('wayword.progress.ne.v1', '["moving-in","second-lesson","counting"]'));
+  await page.goto('/map/');
+  await expect(page.locator('.journey-level-4 a.level-node')).toHaveAttribute('href','/unit/index.html');
+  await expect(page.locator('.journey-level-5 .level-node')).toBeDisabled();
+  await page.goto('/game/?level=letters');
+  await expect(page).toHaveURL(/\/unit\/index.html$/);
+  await expect(page.locator('.writing-tutorial')).toBeVisible();
 });
 
 test('chapter one completion opens chapter two and keeps the later chapters in order', async ({ page }) => {
@@ -76,13 +78,15 @@ test('chapter one completion opens chapter two and keeps the later chapters in o
   for (const width of [1280,390]) {
     await page.setViewportSize({width,height:844});
     await page.goto('/map/');
+    await expect(page.locator('.map-level')).toHaveCount(6);
     await expect(page.locator('.journey-level-1 .level-label')).toContainText('COMPLETE');
     await expect(page.locator('.journey-level-2 a.level-node')).toHaveAttribute('href','/game/index.html?level=second-lesson');
     await expect(page.locator('.journey-level-2 .level-label')).toContainText('Unpack Your Suitcase');
-    await expect(page.locator('.journey-level-3 .level-node')).toBeDisabled();
-    await expect(page.locator('.journey-level-4 .level-node')).toBeDisabled();
-    await expect(page.locator('.journey-level-3 .level-label')).toContainText('CHAPTER 03');
-    await expect(page.locator('.journey-level-4 .level-label')).toContainText('FINALE');
+    for (const level of [3,4,5,6]) await expect(page.locator(`.journey-level-${level} .level-node`)).toBeDisabled();
+    await expect(page.locator('.journey-level-3 .level-label')).toContainText('Counting with Lila');
+    await expect(page.locator('.journey-level-4 .level-label')).toContainText('Your First Letters');
+    await expect(page.locator('.journey-level-5 .level-label')).toContainText('CHAPTER 05');
+    await expect(page.locator('.journey-level-6 .level-label')).toContainText('FINALE');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     const mapBounds=await page.locator('.quest-map').boundingBox(),ctaBounds=await page.locator('.journey-level-1 .level-label .button').boundingBox();
     expect(ctaBounds!.y+ctaBounds!.height).toBeLessThan(mapBounds!.y+mapBounds!.height-12);
