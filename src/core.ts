@@ -30,6 +30,7 @@ export function step(player: Player, backwards = false, canExit = false): Player
 }
 export const atCheckout = (player: Player) => player.col === 4 && player.row === 3 && player.facing === 'N';
 export const outside = (player: Player) => player.col === 4 && player.row === 9;
+export const atShopDoor = (player: Player) => player.col === 4 && player.row === 7 && player.facing === 'S';
 export function facedRack(player: Player): Rack | undefined {
   const [dx, dz] = DELTA[player.facing];
   for (let distance = 1; distance <= 2; distance++) {
@@ -61,8 +62,11 @@ export function routeTo(player: Player, expect: string): string[] | null {
     if (expect === `take:${facedRack(current.player)?.id}`) return [...current.actions, 'take'];
     if (expect === `at:${current.player.col},${current.player.row},${current.player.facing}`) return current.actions;
     if (expect === 'exit' && outside(current.player)) return current.actions;
+    if (expect === 'door' && atShopDoor(current.player)) return current.actions;
     for (const [action, next] of [
-      ['forward', step(current.player, false, expect === 'exit')], ['backward', step(current.player, true, expect === 'exit')],
+      ['forward', step(current.player, false, expect === 'exit')],
+      // Exit guidance turns the learner toward the door before walking forward.
+      ...(expect === 'exit' || expect === 'door' ? [] : [['backward', step(current.player, true)] as const]),
       ['left', turn(current.player, -1)], ['right', turn(current.player, 1)],
     ] as const) queue.push({ player: next, actions: [...current.actions, action] });
   }

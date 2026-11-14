@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5175 --strictPort",
+    "dev": "vite --host 127.0.0.1 --port 5174 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 5175 --strictPort",
-    "build:game": "npm --prefix .. run build -- --base /game/ --outDir website/public/game",
+    "preview": "vite preview --host 127.0.0.1 --port 5174 --strictPort",
+    "build:game": "npm --prefix .. run build:game -- --base /game/ --outDir website/public/game",
     "predev": "npm run build:game",
     "prebuild": "npm run build:game"
   },

@@ -1,19 +1,17 @@
 # Wayword website and demo entry
 
-Landing page and demo authentication UI remain separate from the game source in the repository’s root `src/`. Uses the supplied handoff tokens and original SVG artwork.
+Landing page and demo authentication UI live here; game source lives in the repository’s root `src/`. Both are served together on the same origin. Uses the supplied handoff tokens and original SVG artwork.
 
 ## Run
 
-Install both apps’ dependencies once:
+From the repository root:
 
 ```sh
-npm ci
-cd website
 npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5175/. The landing page is `/`, log-in is `/auth/`, sign-up is `/auth/?mode=signup`, language selection is `/languages/`, and the playable game is `/game/`.
+Open http://127.0.0.1:5174/. The landing page is `/`, log-in is `/auth/`, sign-up is `/auth/?mode=signup`, language selection is `/languages/`, the Basic introduction is `/unit/`, and the playable game is `/game/`.
 
 Before the dev server starts, `predev` builds the root game into the ignored `public/game/` folder. No second server is needed. If changing game source while the website server is running, run `npm run build:game` in `website/` and reload the game.
 
@@ -22,27 +20,29 @@ npm run build
 npm run preview
 ```
 
-Production builds include all three entry points. Deploy `dist/` with directory-index support. The generated game bundle is ignored and rebuilt automatically; game source stays in the root app.
+The root commands delegate to this app; they also work from `website/`. Production builds include home, auth, languages, map and the game. Deploy `website/dist/` (or `dist/` relative to this directory) with directory-index support. The generated game bundle is ignored and rebuilt automatically; game source stays in the root app. Use `npm run dev:game` from the repository root only when you want the isolated shop without the website pages.
 
 ## Demo sign-up and log-in
 
 Both forms accept any valid email and a password of at least 8 characters. Sign-up also requires a name. For example, use `demo@example.com` and `adventure123` with any demo name.
 
-Valid submission resets the form and opens `/languages/index.html`. The language picker shows native names and flags. Nepali opens `/map/index.html`, where The Little Shop launches `/game/index.html`; other languages are marked coming soon and cannot launch a lesson yet. This is demo entry, not authentication: no account, backend, credential storage, or credential transmission. The game is also directly accessible. Password reset remains an explanatory placeholder. Google Fonts only loads the UI font.
+Valid submission resets the form and opens `/languages/index.html`. The language picker shows native names and flags. Nepali opens `/map/index.html`, where Your First Hello launches `/game/index.html?level=moving-in`; other languages are marked coming soon and cannot launch a lesson yet. This is demo entry, not authentication: no account, backend, credential storage, or credential transmission. The game is also directly accessible. Password reset remains an explanatory placeholder. Google Fonts only loads the UI font.
 
 Real authentication can be integrated later without moving auth into the game source.
 
 ## Level map and progression
 
-The map starts at The Little Shop, with a winding path disappearing into clouds. Complete the shop by collecting the packed bag and walking through the exit to save completion on this browser. The results screen links back to the map. The next marker unlocks after completion but remains unplayable and marked coming soon until another level is implemented. Clouded later markers stay locked.
+The four-chapter map starts at Your First Hello: meet your host, request a key, identify and carry your suitcase home, and optionally help a neighbor. Completion saves on this browser. Chapter two is reserved for the next lesson and cannot be launched or falsely completed. The Little Shop is chapter three; The Morning Market is the finale. New players progress in that order; existing shop and market saves retain access without fabricated new completions.
+
+Complete the shop by collecting the packed bag and approaching the closed door. Next level opens the door and walks into the market. The finale teaches Nepali numbers 1–5, then allows free roaming, greetings, directions, physical shopping and payment with coins. An optional lost-toy rescue reuses directions. `/game/index.html?level=market` resumes that chapter when unlocked; the number introduction is skipped once learned. Completing the three stall exchanges saves the finale while leaving exploration open. Locked direct chapter URLs offer a return to the first lesson.
 
 Progression checks: from the repository root, run `node --experimental-strip-types --test website/tests/progression.test.ts`.
 
 ## Door-unlock experiment
 
-This copy runs on port 5175 so it can run alongside the original Languigi site on port 5174. The map’s Basic unit opens `/unit/index.html`. Trace the first five Nepali vowels (अ आ इ ई उ) in order, checking each letter. Coverage and precision against the displayed glyph are checked locally; this is guided tracing, not freehand recognition. A keyboard alternative accepts the same sequence.
+The merged site keeps port 5174. The map’s Basic introduction opens `/unit/index.html`. Trace the first five Nepali vowels (अ आ इ ई उ) in order, checking each letter. Coverage and precision against the displayed glyph are checked locally; this is guided tracing, not freehand recognition. A keyboard alternative accepts the same sequence.
 
-Successful entry opens the door and saves the unlock on this browser (with session-storage fallback). Basic contains five lesson slots: The Little Shop is playable; lessons 2–5 remain upcoming and sequentially locked. Direct entry to the hosted game returns to the door until Basic has been unlocked. The root standalone game remains independently runnable.
+Successful entry opens the door and saves the unlock on this browser (with session-storage fallback). Basic introduces the existing four-chapter story: Your First Hello, the reserved second lesson, The Little Shop, and The Morning Market finale. Writing practice is separate from chapter two. Fresh direct entry to the hosted game returns to Basic until unlocked; existing chapter saves retain access. The root standalone game remains independently runnable. The merged build scripts call `build:game` directly to avoid recursively invoking the complete website build.
 
 Letter-order reference: https://pressbooks.bccampus.ca/nepali/chapter/chapter-1-unit-2-vowel-letters/
 

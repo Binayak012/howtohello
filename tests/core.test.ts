@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { atCheckout, baseBeats, blocked, facedRack, outside, racks, reviewBeat, routeTo, start, step, turn } from '../src/core.ts';
+import { atCheckout, atShopDoor, baseBeats, blocked, facedRack, outside, racks, reviewBeat, routeTo, start, step, turn } from '../src/core.ts';
 import { createStock, layouts, takeOne } from '../src/stock.ts';
 
 test('movement respects the floor plan and two-tile reach', () => {
@@ -81,4 +81,32 @@ test('the counter and the outside are reachable after collecting all four items'
     if (expect === 'at:4,3,N') assert.ok(atCheckout(player));
     if (expect === 'exit') assert.ok(outside(player));
   }
+});
+
+test('exit guidance turns toward the door and walks forward', () => {
+  let player = { col: 4, row: 3, facing: 'N' as const } as ReturnType<typeof start>;
+  const route = routeTo(player, 'exit')!;
+  assert.ok(route);
+  assert.equal(route.includes('backward'), false);
+  for (const action of route) {
+    if (action === 'left') player = turn(player, -1);
+    if (action === 'right') player = turn(player, 1);
+    if (action === 'forward') { assert.equal(player.facing, 'S'); player = step(player, false, true); }
+  }
+  assert.equal(outside(player), true);
+});
+
+test('shop completion guidance stops inside at the closed door, facing it', () => {
+  let player = { col: 4, row: 3, facing: 'N' as const } as ReturnType<typeof start>;
+  const route = routeTo(player, 'door')!;
+  assert.ok(route); assert.equal(route.includes('backward'), false);
+  assert.equal(atShopDoor(start()), false);
+  for (const action of route) {
+    if (action === 'left') player = turn(player, -1);
+    if (action === 'right') player = turn(player, 1);
+    if (action === 'forward') player = step(player);
+    assert.equal(outside(player), false);
+  }
+  assert.equal(atShopDoor(player), true);
+  assert.deepEqual(player, { col: 4, row: 7, facing: 'S' });
 });

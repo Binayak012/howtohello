@@ -3,9 +3,11 @@ import { baseBeats, routeTo, start, step, turn, type Player } from '../src/core'
 
 const keys: Record<string, string> = { left:'ArrowLeft', right:'ArrowRight', forward:'ArrowUp', backward:'ArrowDown', take:'Space' };
 async function learn(page: Page, snapshots = false) {
-  await page.goto('/');
+  await page.addInitScript(()=>localStorage.setItem('wayword.progress.ne.v1','["moving-in","second-lesson"]'));
+  await page.goto('/?level=shop');
   await expect(page.getByRole('heading', { name:'Your first little errand.' })).toBeVisible();
   if (snapshots) await page.screenshot({ path:'test-results/story.png' });
+  await page.getByRole('button', { name:'Say namaste to the shopkeeper' }).click();
   await page.getByRole('button', { name:'Learn the four words' }).click();
   for (const word of ['दायाँ', 'बायाँ', 'अगाडि', 'पछाडि']) await expect(page.locator('.direction-map')).toContainText(word);
   await page.locator('[data-word="backward"]').click();
@@ -89,7 +91,7 @@ for (const phone of [false, true]) {
     await learn(page, !phone);
     if (!phone) {
       await page.evaluate(async () => {
-        const { effects } = await import('/src/main.ts');
+        const { effects } = await import('/src/shop-game.ts');
         const counts = { footsteps:0, bags:0, reactions:0, fruit:0, bottles:0, scans:0, complete:0 };
         const footstep = effects.footstep.bind(effects), bagRustle = effects.bagRustle.bind(effects), reaction = effects.shopkeeperReaction.bind(effects);
         const fruit = effects.fruitPickup.bind(effects), bottle = effects.bottlePickup.bind(effects), scan = effects.barcodeScan.bind(effects), complete = effects.levelComplete.bind(effects);
@@ -133,8 +135,9 @@ for (const phone of [false, true]) {
     await expect(page.locator('#basket')).toContainText('Carrying your packed shopping');
     await expect(page.locator('#results')).toBeHidden();
     // Restore scene focus after clicking the contextual action.
-    player = await follow(page, player, 'exit');
-    expect(player.row).toBe(9);
+    player = await follow(page, player, 'door');
+    expect(player.row).toBe(7);
+    expect(player.facing).toBe('S');
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'complete');
     await expect(page.locator('#results')).toContainText('Your first errand. Done.');
     await expect(page.locator('#results')).toContainText('8 first-try successes');
@@ -143,11 +146,31 @@ for (const phone of [false, true]) {
     if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { reactions:number } }).__effectCounts?.reactions)).toBe(3);
     if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { complete:number } }).__effectCounts?.complete)).toBe(1);
     await page.waitForTimeout(750);
-    expect(await page.evaluate(async () => !(await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(true);
+    expect(await page.evaluate(async () => !(await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(true);
+    await expect(page.locator('#market-journey')).toBeHidden();
+    await expect(page.locator('#market-arrival')).toBeHidden();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('wayword.progress.ne.v1') ?? '[]'))).toEqual(['moving-in','second-lesson','little-shop']);
+
     await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-complete.png` });
+    // The closed-door completion stays put until the learner chooses Next level.
+    await page.keyboard.press('ArrowUp');
+    await expect(page.locator('#position')).toContainText('Tile 4, 7');
+    await expect(page.getByRole('button', { name:'Step forward', exact:true })).toBeDisabled();
+    await expect(page.locator('#next-level')).toBeFocused();
+    if (phone) await page.getByRole('button', { name:'Next level' }).click();
+    else await page.keyboard.press('Enter');
+    await expect(page.locator('#app')).toHaveAttribute('data-phase', 'departing');
+    await expect(page.locator('#results')).toBeHidden();
+    await page.waitForTimeout(5400);
+    await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-market.png` });
+    if (phone) await page.getByRole('button', { name:'Continue', exact:false }).click();
+    await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market', { timeout:15000 });
+    await expect(page.locator('#results')).toBeHidden();
+    await expect(page.locator('#market-title')).toHaveText('The morning market.');
+    await expect(page.getByRole('button', { name:'Learn numbers 1–5' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
-    await page.getByRole('button', { name:'Play the story again' }).click();
+    await page.getByRole('button', { name:'Replay the shop', exact:true }).click();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'story');
     await expect(page.locator('#basket')).toHaveAttribute('data-count', '0');
   });
@@ -155,21 +178,23 @@ for (const phone of [false, true]) {
 
 test('radio is positional, keyboard controlled, persistent, and single-sourced across restarts', async ({ page }) => {
   await page.addInitScript(() => {
+    localStorage.setItem('wayword.progress.ne.v1','["little-shop"]');
     if (!sessionStorage.getItem('radio-test-started')) {
       localStorage.removeItem('wayword.radio.enabled');
       sessionStorage.setItem('radio-test-started', 'true');
     }
   });
-  await page.goto('/');
+  await page.goto('/?level=shop');
   const toggle = page.getByRole('button', { name:'Turn radio off' });
   await expect(toggle).toHaveAttribute('data-state', 'on', { timeout:15000 });
-  expect(await page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(false);
+  expect(await page.evaluate(async () => (await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(false);
+  await page.getByRole('button', { name:'Say namaste to the shopkeeper' }).click();
   await page.getByRole('button', { name:'Learn the four words' }).click();
-  expect(await page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(false);
+  expect(await page.evaluate(async () => (await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(false);
   await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
-  await expect.poll(() => page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(true);
+  await expect.poll(() => page.evaluate(async () => (await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(true);
   const audio = await page.evaluate(async () => {
-    const { radio, scene } = await import('/src/main.ts');
+    const { radio, scene } = await import('/src/shop-game.ts');
     const sound = radio.sound;
     return {
       positional: !!sound && 'panner' in sound,
@@ -198,7 +223,7 @@ test('radio is positional, keyboard controlled, persistent, and single-sourced a
   await page.getByRole('button', { name:'Start over' }).click({ force:true });
   await page.getByRole('button', { name:'Start over' }).click({ force:true });
   expect(await page.evaluate(async () => {
-    const { radio, scene } = await import('/src/main.ts');
+    const { radio, scene } = await import('/src/shop-game.ts');
     return scene?.radioAnchor.children.filter(child => child === radio.sound).length;
   })).toBe(1);
 });
@@ -217,7 +242,8 @@ test('restart during scanning cancels packing and restores all shelf units', asy
 });
 
 test('individual units and checkout visuals reset without shrinking the shopkeeper', async ({ page }) => {
-  await page.goto('/');
+  await page.addInitScript(()=>localStorage.setItem('wayword.progress.ne.v1','["little-shop"]'));
+  await page.goto('/?level=shop');await expect(page.locator('#app')).toHaveAttribute('data-phase','story');
   const result = await page.evaluate(async () => {
     const { ShopScene } = await import('/src/scene.ts');
     const host = document.createElement('div');
@@ -231,8 +257,21 @@ test('individual units and checkout visuals reset without shrinking the shopkeep
     const restored = units.every(unit => unit.visible) && !shop.packedBag.visible && !shop.checkout;
     shop.setPlayer({ col:4, row:3, facing:'N' }, true);
     const distance = shop.camera.position.distanceTo(shop.keeper!.position);
+    let arrivals = 0;
+    shop.walkIntoMarket(() => arrivals++);
+    shop.finishDeparture(); shop.finishDeparture();
+    const arrived = shop.arrived && arrivals === 1 && shop.camera.position.z > 7 && shop.camera.position.z < 9;
+    shop.resetStock();
+    const journeyReset = !shop.arrived && !shop.departure;
+    shop.walkIntoMarket(() => arrivals++); shop.resetStock();
+    const cancelled = !shop.departure && arrivals === 1;
+    shop.reducedMotion = true;
+    shop.walkIntoMarket(() => arrivals++);
+    const reducedArrival = shop.arrived && !shop.departure && arrivals === 2;
     shop.dispose(); host.remove();
-    return { hidden, restored, distance };
+    return { hidden, restored, distance, arrived, journeyReset, cancelled, reducedArrival };
   });
   expect(result.hidden).toBe(1); expect(result.restored).toBe(true); expect(result.distance).toBeGreaterThan(2.5);
+  expect(result.arrived).toBe(true); expect(result.journeyReset).toBe(true);
+  expect(result.cancelled).toBe(true); expect(result.reducedArrival).toBe(true);
 });

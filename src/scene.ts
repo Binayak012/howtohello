@@ -3,6 +3,8 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { racks, DIRECTIONS, type Player, type Rack } from './core';
 import tokens from './tokens.json';
 import { createStock, layouts, type ShelfUnit } from './stock';
+import { GoldenMarket } from './market';
+import type { MarketPose, ActivityId } from './market-world';
 
 const c = tokens.color;
 const materials = new Map<string, THREE.MeshStandardMaterial>();
@@ -42,7 +44,7 @@ function contactShadow(parent: THREE.Object3D, width: number, depth: number) {
 export class ShopScene {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(62, 1, .06, 35);
+  camera = new THREE.PerspectiveCamera(62, 1, .06, 120);
   rackGroups = new Map<string, THREE.Group>();
   itemGroups = new Map<string, THREE.Group>();
   units = new Map<string, THREE.Group>();
@@ -58,6 +60,18 @@ export class ShopScene {
   exitDoor = new THREE.Group();
   radioAnchor = new THREE.Group();
   exitReady = false;
+  market: GoldenMarket;
+  departure?: { at: number; done: () => void };
+  arrived = false;
+  thresholdGlow = new THREE.Group();
+  doorLight = new THREE.SpotLight('#ffd18a', 0, 10, .48, .7, 1.4);
+  marketStartedAt = 0;
+  roamPose?: MarketPose;
+  onMarketInteract?: (id: ActivityId) => void;
+  onMarketItem?: (id:string)=>void;
+  carriedGoods=new THREE.Group();
+  keeperGreetingAt=-10000;
+  carryVisibleAt=0;
   checkout?: { items: THREE.Group[]; from: THREE.Vector3; at: number; last: number; onScan: (count: number) => void; onReady: () => void };
   raf = 0;
   observer: ResizeObserver;
@@ -90,11 +104,14 @@ export class ShopScene {
     Object.assign(sunlight.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: .5, far: 20 });
     sunlight.shadow.normalBias = .025; sunlight.shadow.bias = -.0002;
     sunlight.shadow.radius = 4; this.scene.add(sunlight);
+    this.market = new GoldenMarket(this.scene);
     this.makeRoom();
+    this.makeThresholdLight();
     for (const rack of racks) this.makeRack(rack);
     this.makeKeeper();
     this.scene.add(this.camera);
     this.camera.add(this.hand); this.hand.visible = false;
+    this.camera.add(this.carriedGoods);this.carriedGoods.position.set(-.34,-.47,-.85);
     // First-person hand and rolled sleeve, visible only while picking one unit.
     cylinder(this.hand, [0, -.14, 0], .055, .07, .26, c.cream);
     ball(this.hand, [0, .025, 0], [.065, .095, .04], tokens.skin.T3.base);
@@ -125,11 +142,11 @@ export class ShopScene {
     box(room, [.15, 3.5, 8.3], [4.1, 1.68, 0], '#F1EBDD');
     // The doorway is an actual opening; a hinged glass door opens after checkout.
     for (const x of [-2.4, 2.4]) box(room, [3.4, 3.5, .08], [x, 1.7, 4.12], '#D2E3DE');
-    box(room, [4, .04, 3.5], [0, -.03, 5.4], '#CFD7C7', .008);
-    box(room, [8, 3.8, .1], [0, 1.8, 7.2], '#DDE7D7', .008);
+    box(room, [8.2, .04, 1.8], [0, -.03, 4.9], '#D6C0A0', .008);
     this.exitDoor.position.set(-.65, 0, 4.02); room.add(this.exitDoor);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.25, 2.64, .025), new THREE.MeshStandardMaterial({ color: '#AECAC2', transparent: true, opacity: .2, roughness: .3 }));
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.25, 2.64, .055), new THREE.MeshStandardMaterial({ color: '#648879', roughness: .85 }));
     glass.position.set(.65, 1.35, 0); this.exitDoor.add(glass);
+    for (const y of [.65, 1.94]) box(this.exitDoor, [1.02, 1.05, .065], [.65, y, -.035], '#759887', .018);
     for (const x of [.03, 1.27]) box(this.exitDoor, [.045, 2.68, .045], [x, 1.35, 0], '#496B61', .004);
     for (const y of [.03, 2.68]) box(this.exitDoor, [1.26, .045, .045], [.65, y, 0], '#496B61', .004);
     cylinder(this.exitDoor, [1.1, 1.25, -.07], .018, .018, .28, '#496B61');
@@ -260,6 +277,22 @@ export class ShopScene {
     antenna.rotation.z = -.3;
     ball(radio, [.195, .66, -.03], [.018, .018, .018], '#D3B86E');
     contactShadow(radio, .65, .42);
+  }
+
+  makeThresholdLight() {
+    this.thresholdGlow.name = 'doorway-sunbeam'; this.scene.add(this.thresholdGlow); this.thresholdGlow.visible = false;
+    const beamGeometry = new THREE.BufferGeometry();
+    beamGeometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      -.58, 2.55, 4.1, .58, 2.55, 4.1, 1.15, .025, .8,
+      -.58, 2.55, 4.1, 1.15, .025, .8, -1.15, .025, .8,
+      -.58, .05, 4.1, .58, .05, 4.1, 1.15, .025, .8,
+      -.58, .05, 4.1, 1.15, .025, .8, -1.15, .025, .8,
+    ], 3));
+    const beamMaterial = new THREE.MeshBasicMaterial({ color: '#ffd487', transparent: true, opacity: .12, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.thresholdGlow.add(new THREE.Mesh(beamGeometry, beamMaterial));
+    this.doorLight.position.set(0, 2.9, 5.3); this.doorLight.target.position.set(0, .3, 1.8);
+    this.thresholdGlow.add(this.doorLight, this.doorLight.target);
+
   }
 
   label(title: string, subtitle: string, width: number, height: number) {
@@ -434,6 +467,11 @@ export class ShopScene {
     this.checkout = { items, from, at: performance.now(), last: -1, onScan, onReady };
   }
   resetCheckout() {
+    this.departure = undefined; this.arrived = false;
+    this.roamPose=undefined;this.market.resetActivities();
+    this.carriedGoods.clear();this.carriedGoods.visible=true;this.carryVisibleAt=0;this.keeperGreetingAt=-10000;
+    this.market.root.visible = false; this.thresholdGlow.visible = false; this.doorLight.intensity = 0;
+    this.scene.fog = new THREE.Fog(c.cream, 10, 22);
     this.checkout = undefined; this.checkoutItems.clear(); this.packedContents.clear(); this.packedBag.visible = false;
     if (this.scanner) this.scanner.visible = false;
     this.keeperArms.forEach(arm => arm.rotation.set(0, 0, 0));
@@ -446,6 +484,44 @@ export class ShopScene {
     if (this.reducedMotion) this.scene.remove(object);
     else { this.pickup = { object, from: object.position.clone(), scale: object.scale.clone(), at: performance.now() }; this.hand.visible = true; }
     this.exitReady = true;
+  }
+
+  walkIntoMarket(done: () => void) {
+    this.clearPickup();
+    this.departure = { at: performance.now(), done };
+    this.marketStartedAt = performance.now();
+    this.market.root.visible = true; this.thresholdGlow.visible = true;
+    this.scene.fog = new THREE.Fog('#f5b987', 32, 105);
+    this.renderer.domElement.setAttribute('aria-label', 'Sunlight spills through the opening door. Step onto the footpath and turn right along a wide market street: shoppers at stalls, a parent calming a child, a delivery bicycle, birds and pink clouds.');
+    if (this.reducedMotion) this.finishDeparture();
+  }
+  finishDeparture() {
+    const done = this.departure?.done;
+    this.departure = undefined; this.arrived = true;
+    this.market.root.visible = true; this.hand.visible = false;
+    this.camera.position.set(1.2, 1.73, 7.8);
+    this.camera.rotation.set(.015, Math.PI * 1.5 - .3, 0, 'YXZ');
+    done?.();
+  }
+  setMarketPose(pose: MarketPose) {
+    if(!this.arrived)return;
+    this.roamPose={...pose};this.movedAt=performance.now();
+  }
+  greetShopkeeper(){this.keeperGreetingAt=performance.now();}
+  setMarketCarry(kind:'fruit'|'flowers'|'bread'|'toy'|undefined,count=1,delay=0){
+    this.carriedGoods.clear();this.carriedGoods.visible=!delay;this.carryVisibleAt=delay?performance.now()+delay:0;if(!kind||count===0)return;
+    ball(this.carriedGoods,[-.03,-.08,.04],[.065,.085,.05],tokens.skin.T3.base);
+    cylinder(this.carriedGoods,[-.03,-.23,.04],.055,.07,.21,c.cream);
+    if(kind==='toy'){
+      ball(this.carriedGoods,[0,.15,0],[.09,.11,.07],'#b95e4e');ball(this.carriedGoods,[0,.3,0],[.1,.09,.08],'#c96b53');
+      for(const side of [-1,1]){ball(this.carriedGoods,[side*.08,.38,0],[.04,.04,.03],'#b95e4e');ball(this.carriedGoods,[side*.035,.31,.075],[.009,.012,.009],'#392d2c');}
+    }else{
+      box(this.carriedGoods,[.34,.22,.24],[0,.03,0],'#c5a06b');
+      for(let i=0;i<count;i++){
+        if(kind==='flowers'){box(this.carriedGoods,[.012,.25,.012],[(i%3-1)*.08,.22,Math.floor(i/3)*.08],'#63885b');ball(this.carriedGoods,[(i%3-1)*.08,.36,Math.floor(i/3)*.08],[.065,.04,.065],i%2?'#dfbce4':'#edb28e');}
+        else ball(this.carriedGoods,[(i%3-1)*.08,.2,Math.floor(i/3)*.08],[.07,.07,kind==='bread'?.17:.07],kind==='bread'?'#dfb678':'#dc7954');
+      }
+    }
   }
 
   animateCheckout(now: number) {
@@ -492,6 +568,7 @@ export class ShopScene {
   }
 
   setPlayer(player: Player, instant = false) {
+    if (this.departure || this.arrived) return;
     this.from.copy(this.camera.position); this.fromYaw = this.yaw;
     this.target.set(player.col - 4, 1.58, player.row - 4);
     let angle = -DIRECTIONS.indexOf(player.facing) * Math.PI / 2;
@@ -525,6 +602,7 @@ export class ShopScene {
   }
   resetStock() {
     this.clearPickup(); this.resetCheckout(); this.units.forEach(unit => { unit.visible = true; });
+    this.renderer.domElement.setAttribute('aria-label', 'First-person shop with wooden racks on both sides, a counter and a shopkeeper ahead. Use the controls to move.');
   }
   click = (event: MouseEvent) => {
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -538,6 +616,8 @@ export class ShopScene {
     let object: THREE.Object3D | null = first?.object ?? null;
     let unitId: string | undefined;
     while (object) {
+      if(object.userData.marketItem){this.onMarketItem?.(object.userData.marketItem as string);break;}
+      if (object.userData.activityId) { this.onMarketInteract?.(object.userData.activityId as ActivityId); break; }
       if (object.userData.unitId) unitId = object.userData.unitId;
       if (object.userData.rackId) { this.onRackClick(object.userData.rackId, unitId); break; }
       object = object.parent;
@@ -546,15 +626,40 @@ export class ShopScene {
   animate = () => {
     this.raf = requestAnimationFrame(this.animate);
     const now = performance.now();
+    if(this.carryVisibleAt&&now>=this.carryVisibleAt){this.carriedGoods.visible=true;this.carryVisibleAt=0;}
     // Keep idle rendering at 30fps; movement renders at display rate.
     if (now - this.lastTime < 32 && now - this.movedAt > 250 && !this.pickup && !this.checkout) return;
     this.lastTime = now;
     const t = Math.min((now - this.movedAt) / 220, 1), eased = t * t * (3 - 2 * t);
-    this.camera.position.lerpVectors(this.from, this.target, eased);
-    this.yaw = THREE.MathUtils.lerp(this.fromYaw, this.targetYaw, eased);
-    this.camera.rotation.set(0, this.yaw, 0, 'YXZ');
+    if (!this.departure && !this.arrived) {
+      this.camera.position.lerpVectors(this.from, this.target, eased);
+      this.yaw = THREE.MathUtils.lerp(this.fromYaw, this.targetYaw, eased);
+      this.camera.rotation.set(0, this.yaw, 0, 'YXZ');
+    }
     this.animateCheckout(now);
-    this.exitDoor.rotation.y = THREE.MathUtils.lerp(this.exitDoor.rotation.y, this.exitReady ? -Math.PI / 2 : 0, this.reducedMotion ? 1 : .14);
+    const greeting=(now-this.keeperGreetingAt)/1800;
+    if(greeting>=0&&greeting<1&&!this.checkout){const amount=this.reducedMotion?.8:Math.sin(greeting*Math.PI);this.keeperArms.forEach((arm,i)=>arm.rotation.set(-.95*amount,0,(i?-.4:.4)*amount));}
+    if(this.arrived && this.roamPose) {
+      const pose=this.roamPose;
+      this.camera.position.lerp(new THREE.Vector3(pose.x,pose.z<9||pose.z>19?1.73:1.58,pose.z),this.reducedMotion?1:.3);
+      this.camera.rotation.set(pose.pitch,pose.yaw,0,'YXZ');
+    }
+    const opening = !!this.departure || this.arrived;
+    this.exitDoor.rotation.y = THREE.MathUtils.lerp(this.exitDoor.rotation.y, opening ? -Math.PI * .56 : 0, this.reducedMotion ? 1 : .065);
+    this.doorLight.intensity = opening ? Math.min(22, Math.abs(this.exitDoor.rotation.y) * 18) : 0;
+    if (this.market.root.visible) this.market.update((now - this.marketStartedAt) / 1000, this.arrived ? 1 : this.departure ? Math.min(1, (now - this.departure.at) / 9000) : 0, this.reducedMotion);
+    if (this.departure) {
+      const progress = Math.min(1, (now - this.departure.at) / 9000);
+      // Pause at the hinge, step across the sill, then gently take in the street.
+      const walk = THREE.MathUtils.smoothstep(progress, .16, .62);
+      const turn = THREE.MathUtils.smoothstep(progress, .48, .92);
+      const bob = Math.sin(walk * Math.PI * 8) * .018;
+      this.camera.position.set(turn * 1.2, 1.58 + walk * .15 + bob, 3.15 + walk * 4.65);
+      this.camera.rotation.set(.015 * turn, Math.PI + turn * (Math.PI / 2 - .3), 0, 'YXZ');
+      this.hand.visible = progress > .03 && progress < .3;
+      this.hand.position.set(.32, -.32 - Math.max(0, progress - .18) * 4, -.65); this.hand.rotation.z = -.2;
+      if (progress === 1) this.finishDeparture();
+    }
     if (this.pickup) {
       this.camera.updateMatrixWorld();
       const progress = Math.min((now - this.pickup.at) / 650, 1);
@@ -575,6 +680,10 @@ export class ShopScene {
   dispose() {
     cancelAnimationFrame(this.raf); this.observer.disconnect();
     this.renderer.domElement.removeEventListener('click', this.click);
+    this.thresholdGlow.traverse(object => {
+      if (object instanceof THREE.Mesh) { object.geometry.dispose(); (object.material as THREE.Material).dispose(); }
+    });
+    this.market.dispose();
     this.renderer.dispose(); this.renderer.domElement.remove();
   }
 }

@@ -1,0 +1,31 @@
+/* Chapter 2 builds on the chapter 1 (arrival-*) styles in moving-in.css. */
+.unpack-dot{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1.5px #3d302a26;flex:none}
+.unpack-intro-dots{display:flex;justify-content:center;gap:10px;margin:20px 0 6px}.unpack-intro-dots .unpack-dot{width:30px;height:30px}
+.unpack-panel{transform:translateY(-50%);left:4%;right:auto;width:min(450px,44%)}
+.unpack-panel header .arrival-eyebrow:last-child{text-align:right}
+.unpack-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:14px 0}
+.unpack-swatches button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border-radius:16px;background:#f5ecdc;border:2px solid transparent;font:600 13px/1.3 var(--font-target)}
+.unpack-swatches button .unpack-dot{width:26px;height:26px}
+.unpack-swatches button.seen{background:var(--lavtint)}
+.unpack-swatches button[aria-pressed=true]{border-color:var(--teal);background:#fffaf0}
+.unpack-card{position:relative;border:2px solid color-mix(in srgb,var(--swatch) 55%,transparent);background:color-mix(in srgb,var(--swatch) 14%,#fffaf0)}
+.unpack-card .unpack-dot{width:46px;height:46px;margin:0 auto}
+.unpack-target strong{font:700 1.15em/1.3 var(--font-target);color:var(--teal-d)}
+.unpack-target{white-space:nowrap}.unpack-target .arrival-roman{display:inline;font-size:.5em;letter-spacing:0;color:var(--muted);font-weight:700;margin:0 .15em}.unpack-target .arrival-roman::before{content:'('}.unpack-target .arrival-roman::after{content:')'}
+.unpack-tray{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.unpack-tray button{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:99px;background:#f5ecdc;font-size:12px;box-shadow:0 3px 0 #d8c7aa}
+.unpack-tray button .unpack-dot{width:22px;height:22px}
+.unpack-tray button.unpack-wrong{animation:unpack-shake .4s}
+.arrival-answers button.unpack-right{border-color:var(--teal);background:#e3f1ec;opacity:1}
+.unpack-app .arrival-complete .arrival-spark{width:48px;height:48px;font-size:26px;margin-bottom:10px;border-radius:16px}
+.unpack-status{min-height:20px;font-size:12px!important;font-weight:700;color:var(--teal-d)!important}
+.unpack-status [lang],.unpack-status{font-family:inherit}
+.unpack-words li{flex-direction:column;gap:3px}.unpack-words .unpack-dot{width:16px;height:16px}
+.unpack-fallback{background:linear-gradient(#efe0c4,#e4ccaa)}.unpack-fallback p{text-align:center;color:var(--muted);line-height:1.8;margin-bottom:40vh}
+@keyframes unpack-shake{25%{translate:-5px 0}75%{translate:5px 0}}
+@media(max-width:560px){
+  .unpack-panel{transform:none;left:12px;right:12px;width:auto}
+  .unpack-app:is([data-phase=study],[data-phase=unpack],[data-phase=check],[data-phase=look]) .arrival-world{bottom:var(--unpack-panel,45%)}
+  .unpack-swatches{gap:5px}.unpack-swatches button{font-size:11px;padding:8px 2px}
+  .unpack-panel h2{font-size:21px}
+}

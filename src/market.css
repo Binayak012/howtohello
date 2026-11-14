@@ -1,0 +1,22 @@
+#app[data-phase=departing] .masthead,#app[data-phase=departing] .scene-top,#app[data-phase=departing] .scene-bottom,#app[data-phase=departing] .cue,#app[data-phase=departing] .playbar,#app[data-phase=departing] footer{opacity:0;pointer-events:none;transition:opacity .6s}
+#app[data-phase=departing] .vignette,#app[data-phase=market] .vignette{background:radial-gradient(ellipse at 65% 25%,#ffdda21a,transparent 65%);box-shadow:inset 0 0 120px #51341c35}
+.market-journey{position:absolute;inset:0;z-index:5;pointer-events:none;color:#fff5df}
+.market-journey:before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,#fff6ceee,#ffc06455 55%,transparent 85%);mix-blend-mode:screen;animation:threshold-sunlight 2.5s ease both}
+@keyframes threshold-sunlight{0%{opacity:0}22%{opacity:.12}45%{opacity:.75}70%{opacity:.24}100%{opacity:0}}
+.market-letterbox{position:absolute;left:0;right:0;height:7vh;background:#302b25;animation:market-bars 1s ease both}
+.market-letterbox.top{top:0}.market-letterbox.bottom{bottom:0}
+.market-caption{position:absolute;left:8%;bottom:15%;text-shadow:0 2px 22px #39261580;animation:market-caption 9s both}
+.market-caption>span{font-size:10px;letter-spacing:.3em;font-weight:700}.market-caption h2{font-family:Georgia,serif;font-size:clamp(32px,4.7vw,68px);font-weight:400;letter-spacing:-.035em;line-height:1.12;margin:16px 0}.market-caption p{font-size:clamp(12px,1.2vw,16px);letter-spacing:.035em}
+#skip-journey{position:absolute;right:5%;bottom:10%;pointer-events:auto;padding:12px 20px;border:1px solid #fff3d450;border-radius:30px;background:#44352280;color:#fff5df;font-size:12px;backdrop-filter:blur(12px)}#skip-journey span{margin-left:18px}
+@keyframes market-bars{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes market-caption{0%,30%{opacity:0;transform:translateY(16px)}46%,88%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-5px)}}
+#app[data-phase=complete] .results{background:#fffcf4ed;backdrop-filter:blur(18px);box-shadow:0 24px 100px #5d402438;border:1px solid #fff8e4}
+#app[data-phase=complete] .results>.quiet{display:inline-block;text-decoration:none;margin:12px 5px 0}
+#app[data-phase=complete] #next-level{display:block;margin:18px auto 0;min-width:180px}
+#app[data-phase=market] :is(.scene-top,.scene-bottom,.cue,.playbar,footer){display:none}
+#app[data-phase=market] .chapter{color:#fff9e9;text-shadow:0 1px 12px #302b25}
+.market-arrival{position:absolute;z-index:5;left:5%;bottom:6%;width:min(390px,90%);padding:24px 28px;border:1px solid #fff2d1b3;border-radius:24px;background:#fff9ebed;box-shadow:0 15px 70px #51341c30;backdrop-filter:blur(14px)}
+.market-arrival h2{font:400 clamp(26px,3vw,38px)/1.15 Georgia,serif;letter-spacing:-.04em;margin:10px 0}.market-arrival>p{font-size:13px;line-height:1.65}.market-arrival>.eyebrow{font-size:9px}.market-arrival .market-preview-note{font-size:11px;color:var(--muted)}.market-arrival .quiet{display:inline-block;margin:6px 5px 0 0;text-decoration:none;font-size:11px}
+.market-arrival>.primary{display:block;width:100%;margin:18px 0 10px;font-size:13px}
+@media(max-width:560px){.market-caption{left:7%;right:7%;bottom:21%}.market-caption h2{max-width:300px}.market-caption>span{font-size:8px}#skip-journey{bottom:10%}}
+@media(prefers-reduced-motion:reduce){.market-caption,.market-letterbox{animation:none}}
