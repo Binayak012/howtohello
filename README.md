@@ -38,3 +38,7 @@ Browser tests use installed Google Chrome. They cover the full story, word lesso
 - Nothing is published; this project runs locally.
 
 Design tokens live in `src/tokens.css` and `src/tokens.json`; cue strings live in `src/pack.ts`, movement and review rules in `src/core.ts`, and the 3D shop in `src/scene.ts`.
+
+## Landing and authentication website
+
+The independent landing page and UI-only authentication screens live in [`website/`](website/README.md). Run `cd website && npm ci && npm run dev` to develop them on port 5174. The game remains in the root app and runs separately.
