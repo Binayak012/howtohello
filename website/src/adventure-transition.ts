@@ -1,68 +1,59 @@
-// Simplified, original continent silhouettes in longitude/latitude coordinates.
-const continents = [
-  [[-165,65],[-130,72],[-105,60],[-65,53],[-82,25],[-100,16],[-118,32],[-145,50]],
-  [[-80,12],[-48,4],[-35,-8],[-52,-35],[-70,-55],[-76,-15]],
-  [[-18,35],[15,37],[40,12],[32,-12],[18,-35],[4,-28],[-12,4]],
-  [[-10,37],[-5,58],[25,72],[70,65],[110,72],[170,55],[145,35],[118,20],[105,0],[80,8],[65,28],[40,40],[25,35]],
-  [[112,-12],[138,-10],[154,-26],[145,-40],[117,-34]],
-  [[-52,60],[-25,70],[-38,82],[-60,78]],
-];
-
-function continentPath(points: number[][], rotation: number): string {
-  const radians = Math.PI / 180;
-  const projected = points.map(([longitude, latitude]) => {
-    const lon = (longitude + rotation) * radians;
-    const lat = latitude * radians;
-    return { x: 96 * Math.cos(lat) * Math.sin(lon), y: -96 * Math.sin(lat), z: Math.cos(lat) * Math.cos(lon) };
-  });
-  const visible: { x: number; y: number }[] = [];
-  for (let i = 0; i < projected.length; i++) {
-    const a = projected[i];
-    const b = projected[(i + 1) % projected.length];
-    if (a.z >= 0) visible.push(a);
-    if ((a.z >= 0) !== (b.z >= 0)) {
-      const t = a.z / (a.z - b.z);
-      visible.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-    }
-  }
-  return visible.length < 3 ? '' : visible.map((point, i) => `${i ? 'L' : 'M'}${(120 + point.x).toFixed(2)} ${(120 + point.y).toFixed(2)}`).join(' ') + 'Z';
-}
+import { geoDistance, geoOrthographic, geoPath } from 'd3-geo';
+import { earthLand } from './earth-land';
+import { clayEarthSvg, earthClouds } from './earth-art';
+import { playTransitionTune, transitionMuted, rememberTransitionMuted } from './transition-tune';
 
 const arrivalKey = 'wayword-adventure-arrival';
 
-/** A brief, decorative globe journey reserved for first-time sign-up links. */
+/** Globe journey shown only after valid demo auth submission. */
 export function setupAdventureTransition(isAuth: boolean, navigate: (destination: string) => void): () => void {
   const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  if (isAuth) {
+  let arrivalTimer: number | undefined;
+  if (isAuth || location.pathname.startsWith('/languages')) {
     try {
       const started = Number(sessionStorage.getItem(arrivalKey));
       sessionStorage.removeItem(arrivalKey);
       if (started && Date.now() - started < 10000 && !motion.matches) {
         document.body.classList.add('adventure-arrival');
-        window.setTimeout(() => document.body.classList.remove('adventure-arrival'), 1500);
+        arrivalTimer = window.setTimeout(() => document.body.classList.remove('adventure-arrival'), 1500);
       }
     } catch { /* Navigation also works when browser storage is unavailable. */ }
-    return () => {};
   }
   let overlay: HTMLDivElement | undefined;
   let journey: Animation | undefined;
   let leaving = false;
   let zoomFrame = 0;
+  let tune: ReturnType<typeof playTransitionTune> = null;
 
-  async function onClick(event: MouseEvent) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    const target = event.target;
-    const link = target instanceof Element ? target.closest<HTMLAnchorElement>('a[data-adventure]') : null;
-    if (!link || link.target === '_blank' || motion.matches) return;
-    event.preventDefault();
+  function onNavigate(event: Event) {
+    const destination = (event as CustomEvent<{ destination: string }>).detail?.destination;
+    if (typeof destination !== 'string') return;
+    const url = new URL(destination, location.href);
+    if (url.origin !== location.origin) return;
+    if (motion.matches) { navigate(url.href); return; }
+    void travel(url.href);
+  }
+
+  async function travel(destination: string) {
     if (leaving) return;
     leaving = true;
     document.documentElement.classList.add('adventure-transition-active');
-    const destination = link.href;
     overlay = document.createElement('div');
     overlay.className = 'adventure-transition';
-    overlay.innerHTML = `<div class="journey-backdrop"></div><div class="journey-night-sky" aria-hidden="true"></div><div class="journey-art" aria-hidden="true"><span class="journey-orbit"></span><span class="journey-spark journey-spark-one">✦</span><span class="journey-spark journey-spark-two">✧</span><svg class="journey-globe" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="journey-ocean" cx="32%" cy="25%" r="80%"><stop stop-color="#4caaa1"/><stop offset=".6" stop-color="#1f7a7a"/><stop offset="1" stop-color="#145454"/></radialGradient><clipPath id="journey-circle"><circle cx="120" cy="120" r="96"/></clipPath></defs><circle cx="120" cy="126" r="98" fill="#2b2340" opacity=".08"/><g clip-path="url(#journey-circle)"><circle cx="120" cy="120" r="96" fill="url(#journey-ocean)"/><g class="journey-land" fill="#f0d69d" stroke="#f0d69d" stroke-width="2" stroke-linejoin="round">${continents.map(() => '<path/>').join('')}</g><g fill="none" stroke="#fff6e8" stroke-width="1" opacity=".19"><ellipse cx="120" cy="120" rx="48" ry="96"/><path d="M24 120h192M37 72h166M37 168h166"/></g><path d="M50 67q30-37 77-29" fill="none" stroke="white" stroke-width="8" stroke-linecap="round" opacity=".25"/><circle class="journey-night-shade" cx="120" cy="120" r="96" fill="#10182f" opacity="0"/></g></svg></div><p class="journey-caption" role="status">A new day. Your next adventure.</p>`;
+    overlay.innerHTML = `<div class="journey-backdrop"></div><div class="journey-sky-clouds" aria-hidden="true"><span class="sky-cloud sky-cloud-one"></span><span class="sky-cloud sky-cloud-two"></span><span class="sky-cloud sky-cloud-three"></span></div><div class="journey-dusk-glow" aria-hidden="true"></div><div class="journey-art" aria-hidden="true"><span class="journey-orbit"></span><span class="journey-spark journey-spark-one">✦</span><span class="journey-spark journey-spark-two">✧</span>${clayEarthSvg}</div><div class="journey-cream-wash" aria-hidden="true"></div><p class="journey-caption" role="status">A new day. Your next adventure.</p>`;
     document.body.append(overlay);
+    let muted = transitionMuted();
+    tune = playTransitionTune(muted);
+    const sound = document.createElement('button');
+    sound.className = 'journey-sound'; sound.type = 'button';
+    function updateSound() {
+      sound.textContent = tune ? (muted ? '♫ Sound off' : '♫ Sound on') : 'Sound unavailable';
+      sound.setAttribute('aria-label', muted ? 'Unmute transition music' : 'Mute transition music');
+      sound.setAttribute('aria-pressed', String(muted));
+      sound.disabled = !tune;
+    }
+    sound.onclick = () => { muted = !muted; rememberTransitionMuted(muted); tune?.setMuted(muted); updateSound(); };
+    updateSound(); overlay.append(sound);
     // Zoom the SVG camera itself, keeping the globe vector-sharp at every size.
     const globe = overlay.querySelector<SVGSVGElement>('.journey-globe')!;
     const art = overlay.querySelector<HTMLElement>('.journey-art')!;
@@ -70,30 +61,52 @@ export function setupAdventureTransition(isAuth: boolean, navigate: (destination
     const height = innerHeight;
     const finalScale = Math.hypot(width, height) / 175;
     const zoomDuration = 2400;
-    const land = [...globe.querySelectorAll<SVGPathElement>('.journey-land path')];
-    const shade = globe.querySelector<SVGCircleElement>('.journey-night-shade')!;
-    const sky = overlay.querySelector<HTMLElement>('.journey-night-sky')!;
+    const land = [...globe.querySelectorAll<SVGPathElement>('.journey-land-layer')];
+    const surfaceClouds = [...globe.querySelectorAll<SVGGElement>('.earth-cloud')];
+    const projection = geoOrthographic().translate([120, 120]).scale(96).precision(.25);
+    const projectLand = geoPath(projection);
+    const shade = globe.querySelector<SVGCircleElement>('.journey-dusk-shade')!;
+    const glow = overlay.querySelector<HTMLElement>('.journey-dusk-glow')!;
+    const wash = overlay.querySelector<HTMLElement>('.journey-cream-wash')!;
     const caption = overlay.querySelector<HTMLElement>('.journey-caption')!;
     const startedAt = performance.now();
     function drawZoom(now: number) {
       const progress = Math.min(1, (now - startedAt) / zoomDuration);
-      const rotation = -30 + progress * 360;
-      land.forEach((path, i) => path.setAttribute('d', continentPath(continents[i], rotation)));
-      const night = Math.pow(Math.sin(Math.PI * progress), 3);
-      shade.setAttribute('opacity', String(night * .82));
-      sky.style.opacity = String(night);
-      // Share the lighting clock so the caption eases naturally into moonlight.
-      const light = Math.max(0, Math.min(1, (night - .2) / .55));
-      const blend = light * light * (3 - 2 * light);
+      const drift = progress * progress * (3 - 2 * progress);
+      const rotation = -18 + drift * 210;
+      projection.rotate([rotation, -12, 0]);
+      const coastlines = projectLand(earthLand) ?? '';
+      land.forEach(layer => layer.setAttribute('d', coastlines));
+      const center = projection.invert!([120, 120])!;
+      surfaceClouds.forEach((cloud, i) => {
+        const position = earthClouds[i];
+        const distance = geoDistance(center, position);
+        const point = projection(position)!;
+        const visibility = Math.max(0, Math.min(1, (Math.PI / 2 - distance) / .2));
+        cloud.setAttribute('opacity', String(visibility * .9));
+        cloud.setAttribute('transform', `translate(${point[0]} ${point[1]}) scale(${Math.max(.15, Math.cos(distance)) * .7} .7)`);
+      });
+      // A pastel dusk preserves the passing-day idea without a dark loading screen.
+      const dusk = Math.pow(Math.sin(Math.PI * progress), 2);
+      shade.setAttribute('opacity', String(dusk * .2));
+      glow.style.opacity = String(dusk * .8);
       const dayColor = [43, 35, 64];
-      const nightColor = [255, 246, 232];
-      const channels = dayColor.map((channel, i) => Math.round(channel + (nightColor[i] - channel) * blend));
+      const duskColor = [31, 90, 87];
+      const channels = dayColor.map((channel, i) => Math.round(channel + (duskColor[i] - channel) * dusk));
       caption.style.color = `rgb(${channels.join(',')})`;
-      caption.style.textShadow = `0 2px 14px rgba(244,182,63,${(blend * .22).toFixed(3)})`;
-      // See the day/night cycle before the final camera move into the globe.
-      const t = Math.max(0, (progress - .52) / .48);
-      const eased = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      const scale = 1 + (finalScale - 1) * eased;
+      // The zoom grows continuously and eases at both ends, without a late surge.
+      const t = Math.max(0, Math.min(1, (progress - .36) / .64));
+      const eased = t * t * t * (t * (t * 6 - 15) + 10);
+      const scale = Math.exp(Math.log(finalScale) * eased);
+      // Keep text on the quiet opening frame, then clear it before the close-up.
+      const appear = Math.min(1, progress / .1);
+      const fade = Math.max(0, Math.min(1, (scale - 1.015) / .1));
+      const disappear = fade * fade * (3 - 2 * fade);
+      caption.style.opacity = String(appear * (1 - disappear));
+      caption.style.visibility = disappear === 1 ? 'hidden' : 'visible';
+      caption.style.transform = `translateY(${5 * (1 - appear) - 3 * disappear}px)`;
+      const arrival = Math.max(0, Math.min(1, (progress - .78) / .22));
+      wash.style.opacity = String(arrival * arrival * (3 - 2 * arrival));
       const viewWidth = width / scale;
       const viewHeight = height / scale;
       globe.setAttribute('viewBox', `${120 - viewWidth / 2} ${120 - viewHeight / 2} ${viewWidth} ${viewHeight}`);
@@ -111,6 +124,7 @@ export function setupAdventureTransition(isAuth: boolean, navigate: (destination
     // Carry the exact final globe frame across the synchronous page swap.
     const handoff = overlay!.cloneNode(true) as HTMLDivElement;
     handoff.querySelector('.journey-caption')?.remove();
+    handoff.querySelector('.journey-sound')?.remove();
     handoff.setAttribute('aria-hidden', 'true');
     handoff.style.pointerEvents = 'none';
     navigate(destination);
@@ -128,6 +142,8 @@ export function setupAdventureTransition(isAuth: boolean, navigate: (destination
   }
 
   function reset() {
+    tune?.stop();
+    tune = null;
     document.documentElement.classList.remove('adventure-transition-active');
     cancelAnimationFrame(zoomFrame);
     journey?.cancel();
@@ -135,11 +151,13 @@ export function setupAdventureTransition(isAuth: boolean, navigate: (destination
     overlay = undefined;
     leaving = false;
   }
-  document.addEventListener('click', onClick);
+  document.addEventListener('wayword:navigate', onNavigate);
   // Reset the outgoing overlay when returning through the back/forward cache.
   window.addEventListener('pageshow', reset);
   return () => {
-    document.removeEventListener('click', onClick);
+    document.removeEventListener('wayword:navigate', onNavigate);
+    window.clearTimeout(arrivalTimer);
+    document.body.classList.remove('adventure-arrival');
     window.removeEventListener('pageshow', reset);
     reset();
   };

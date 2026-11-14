@@ -13,3 +13,6 @@
 .you-marker span{transition:transform .35s ease}.word-lesson[data-direction=right] .you-marker span{transform:rotate(90deg)}.word-lesson[data-direction=left] .you-marker span{transform:rotate(-90deg)}.word-lesson[data-direction=forward] .you-marker span{transform:translateY(-5px)}.word-lesson[data-direction=backward] .you-marker span{transform:translateY(5px)}
 
 .map-return{display:inline-block;margin:14px 0 0 12px;text-decoration:none}
+
+/* Announce intro headings without making the action look preselected. */
+#welcome-title:focus{outline:none}

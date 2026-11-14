@@ -58,9 +58,6 @@ export function renderLanguages(app: HTMLDivElement, brand: string) {
     if (resume) resume.disabled = true;
     button.textContent = 'Opening your world…';
     try { recordLanguageStarted(localStorage, language.id); } catch { /* Optional local history. */ }
-    if (!hasStarted(language.id)) {
-      try { sessionStorage.setItem('wayword.map-arrival', String(Date.now())); } catch { /* Map still works without storage. */ }
-    }
     window.location.assign('/map/index.html');
   }
   const resume = app.querySelector<HTMLButtonElement>('#resume-learning');

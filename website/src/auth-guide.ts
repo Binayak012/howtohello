@@ -16,6 +16,11 @@ export function setupAuthGuide(): () => void {
   let disposed = false;
   let modeFrame = 0;
   let returning = false;
+  const character = document.querySelector<HTMLElement>('.auth-character');
+  function updateEyes() {
+    const active = document.activeElement;
+    character?.classList.toggle('is-private', active instanceof Element && !!active.closest('.password-field'));
+  }
 
   function destination(input: HTMLInputElement) {
     const bounds = input.getBoundingClientRect();
@@ -86,6 +91,7 @@ export function setupAuthGuide(): () => void {
 
   function followFocus() {
     if (disposed) return;
+    updateEyes();
     const focused = document.activeElement;
     if (focused instanceof HTMLInputElement && form!.contains(focused)) {
       if (current !== focused) { current = focused; place(focused); }
@@ -141,6 +147,7 @@ export function setupAuthGuide(): () => void {
   companion.hidden = true;
   document.addEventListener('auth-mode-change', onModeChange);
   document.addEventListener('focusin', followFocus);
+  form.addEventListener('input', updateEyes);
   document.addEventListener('focusout', onBlur);
   window.addEventListener('resize', reposition);
   window.addEventListener('scroll', reposition, { passive: true });
@@ -153,6 +160,8 @@ export function setupAuthGuide(): () => void {
     document.removeEventListener('auth-mode-change', onModeChange);
     movement?.cancel();
     companion.remove();
+    character?.classList.remove('is-private');
+    form.removeEventListener('input', updateEyes);
     home.classList.remove('pen-in-flight');
     document.removeEventListener('focusin', followFocus);
     document.removeEventListener('focusout', onBlur);

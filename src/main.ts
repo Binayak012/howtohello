@@ -1,3 +1,4 @@
+import { isBasicUnlocked } from './unit-unlock';
 import { recordLanguageStarted } from './learning-history';
 import { completeLevel } from './progression';
 import './tokens.css';
@@ -12,6 +13,12 @@ type Phase = 'story' | 'learn' | 'practice' | 'shop' | 'checkout' | 'scanning' |
 type Move = keyof typeof pack.directions;
 const practice: Move[] = ['right', 'left', 'forward', 'backward'];
 const app = document.querySelector<HTMLDivElement>('#app')!;
+if (import.meta.env.BASE_URL === '/game/') {
+  let unitOpen = false;
+  try { unitOpen = isBasicUnlocked(localStorage); } catch { /* Try the session fallback. */ }
+  try { unitOpen ||= isBasicUnlocked(sessionStorage); } catch { /* Storage unavailable. */ }
+  if (!unitOpen) { app.style.visibility = 'hidden'; window.location.replace('/unit/index.html'); }
+}
 try { recordLanguageStarted(localStorage, 'ne'); } catch { /* Optional browser-local learning history. */ }
 app.innerHTML = `
   <header class="masthead"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/map/index.html' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · YOUR FIRST ERRAND</span><div class="header-actions"><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
@@ -51,14 +58,14 @@ function directionCards() {
 function showStory() {
   el('welcome').hidden = false;
   el('intro-card').classList.remove('word-lesson');
-  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 01 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is still open, and you have a short list.</p><blockquote>“Welcome! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary">Learn the four words ↗</button><small class="welcome-keys">Explore → collect → scan & pack → walk home</small>`;
+  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 01 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is still open, and you have a short list.</p><blockquote>“Welcome! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary">Learn the four words ↗</button><small class="welcome-keys">Explore → collect → scan & pack → walk home</small>`;
   el('begin').onclick = showWords;
-  el('begin').focus();
+  el('welcome-title').focus({ preventScroll: true });
 }
 function showWords() {
   phase = 'learn'; render();
   el('intro-card').classList.add('word-lesson');
-  el('intro-card').innerHTML = `<div class="eyebrow">YOUR FIRST FOUR WORDS</div><h1 id="welcome-title">Find your bearings.</h1><p class="script-intro">New to Devanagari? Start with the Latin letters.<br>Match the word to its meaning, then try the move.</p><div class="direction-map">${directionCards()}<div class="you-marker" aria-label="You, facing forward"><span>↑</span><small>YOU</small></div></div><div class="word-detail"><span class="detail-spark" aria-hidden="true">✦</span><p id="word-explanation" class="word-explanation">${pack.directions.right.lesson}</p></div><button id="begin" class="primary lesson-cta"><span>Let’s try it in the shop</span><span aria-hidden="true">↗</span></button><div class="reading-preference"><span>Aa &nbsp; Latin-letter guides</span><button id="lesson-reading-toggle" role="switch" aria-label="Latin-letter guides" aria-checked="${readingHelp}">${readingHelp ? 'On' : 'Off'}</button></div>`;
+  el('intro-card').innerHTML = `<div class="eyebrow">YOUR FIRST FOUR WORDS</div><h1 id="welcome-title" tabindex="-1">Find your bearings.</h1><p class="script-intro">New to Devanagari? Start with the Latin letters.<br>Match the word to its meaning, then try the move.</p><div class="direction-map">${directionCards()}<div class="you-marker" aria-label="You, facing forward"><span>↑</span><small>YOU</small></div></div><div class="word-detail"><span class="detail-spark" aria-hidden="true">✦</span><p id="word-explanation" class="word-explanation">${pack.directions.right.lesson}</p></div><button id="begin" class="primary lesson-cta"><span>Let’s try it in the shop</span><span aria-hidden="true">↗</span></button><div class="reading-preference"><span>Aa &nbsp; Latin-letter guides</span><button id="lesson-reading-toggle" role="switch" aria-label="Latin-letter guides" aria-checked="${readingHelp}">${readingHelp ? 'On' : 'Off'}</button></div>`;
   el('lesson-reading-toggle').onclick = () => setReadingHelp(!readingHelp);
   const select = (key: Move) => {
     el('word-explanation').textContent = pack.directions[key].lesson;
@@ -71,7 +78,7 @@ function showWords() {
     phase = 'practice'; el('welcome').hidden = true; render(); focusScene(); resetIdle();
     say('Let’s try it together.', pack.directions.right.lesson);
   };
-  el('begin').focus();
+  el('welcome-title').focus({ preventScroll: true });
 }
 function navigationMove(): Move {
   const target = phase === 'exit' ? 'exit' : 'at:4,3,N';
@@ -229,7 +236,7 @@ function finish() {
   try { completeLevel(localStorage, 'little-shop'); } catch { /* Play works without storage. */ }
   const mastered = outcomes.filter(outcome => !outcome.misses && !outcome.helped).length;
   el('results').hidden = false;
-  el('results').innerHTML = `<div class="eyebrow">CHAPTER 01 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and walked home with your shopping.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="again" class="primary">Play the story again ↗</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="primary map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
+  el('results').innerHTML = `<div class="eyebrow">CHAPTER 01 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and walked home with your shopping.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="again" class="primary">Play the story again ↗</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="primary map-return" href="/unit/index.html">Back to Basic ↗</a>' : ''}`;
   el('again').onclick = restart; el('again').focus(); say('A little more at home.', 'Four words you’ve put into practice.');
 }
 function restart() {
@@ -273,7 +280,7 @@ el('welcome').addEventListener('keydown', event => {
   if (event.key !== 'Tab') return;
   const buttons = Array.from(el('welcome').querySelectorAll<HTMLButtonElement>('button'));
   const first = buttons[0], last = buttons[buttons.length - 1];
-  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === el('welcome-title'))) { event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 });
 restart();

@@ -16,6 +16,6 @@ export default defineConfig({
     configurePreviewServer(server) { server.middlewares.use(gameDirectoryIndex); },
   }],
   build: {
-    rollupOptions: { input: { home: 'index.html', auth: 'auth/index.html', languages: 'languages/index.html', map: 'map/index.html' } },
+    rollupOptions: { input: { home: 'index.html', auth: 'auth/index.html', languages: 'languages/index.html', map: 'map/index.html', unit: 'unit/index.html' } },
   },
 });

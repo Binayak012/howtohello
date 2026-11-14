@@ -1,0 +1,39 @@
+{
+  "source": "Princeton University.m4a",
+  "type": "user recording",
+  "order_confirmed_by_user": true,
+  "speed_changed": false,
+  "notes": "First five utterances used. Final extra utterance not used. Shared gentle gain and 5ms edge fades; silence retained before and after each sound.",
+  "clips": [
+    {
+      "letter": "अ",
+      "file": "a.wav",
+      "source_start": 0.37,
+      "source_end": 1.33
+    },
+    {
+      "letter": "आ",
+      "file": "aa.wav",
+      "source_start": 1.76,
+      "source_end": 2.87
+    },
+    {
+      "letter": "इ",
+      "file": "i.wav",
+      "source_start": 3.34,
+      "source_end": 4.27
+    },
+    {
+      "letter": "ई",
+      "file": "ii.wav",
+      "source_start": 4.8,
+      "source_end": 5.87
+    },
+    {
+      "letter": "उ",
+      "file": "u.wav",
+      "source_start": 6.29,
+      "source_end": 7.15
+    }
+  ]
+}
