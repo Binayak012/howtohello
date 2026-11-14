@@ -56,6 +56,7 @@ export class ShopScene {
   packedContents = new THREE.Group();
   scanner?: THREE.Mesh;
   exitDoor = new THREE.Group();
+  radioAnchor = new THREE.Group();
   exitReady = false;
   checkout?: { items: THREE.Group[]; from: THREE.Vector3; at: number; last: number; onScan: (count: number) => void; onReady: () => void };
   raf = 0;
@@ -196,6 +197,7 @@ export class ShopScene {
     for (let n = 0; n < 3; n++) box(counter, [.18, .29, .11], [-1.05 + n * .22, 1.17, -.23], '#BF9B6C', .009);
     box(counter, [.4, .045, .24], [-.67, 1.05, .27], '#AD875A', .005);
     for (let n = 0; n < 6; n++) box(counter, [.045, .035, .13], [-.83 + n * .06, 1.09, .27], ['#A36552', '#628675', '#D2AC5D'][n % 3], .004);
+    this.makeRadio(counter);
     const sign = this.label('THE LITTLE SHOP', 'make yourself at home', 1024, 240);
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(2.45, .57), new THREE.MeshBasicMaterial({ map: sign, transparent: true }));
     plaque.position.set(0, 2.66, -3.99); this.scene.add(plaque);
@@ -235,6 +237,29 @@ export class ShopScene {
     }
     // Small floor runner marks the customer side of checkout without blocking the aisle.
     box(room, [2.5, .009, .55], [0, .012, -1.32], '#AFBAA5', .015);
+  }
+
+  makeRadio(counter: THREE.Group) {
+    const radio = this.radioAnchor;
+    radio.name = 'checkout-radio';
+    radio.position.set(1.12, 1.08, .02);
+    radio.scale.setScalar(.7);
+    counter.add(radio);
+    box(radio, [.48, .3, .22], [0, .15, 0], '#4F7468', .035);
+    box(radio, [.19, .11, .012], [.105, .18, .116], '#E7D6AF', .012);
+    for (let line = 0; line < 4; line++) box(radio, [.15, .008, .006], [.105, .145 + line * .023, .124], '#9B8968', .002);
+    const speaker = cylinder(radio, [-.125, .16, .118], .09, .09, .016, '#293F3C');
+    speaker.rotation.x = Math.PI / 2;
+    const speakerCenter = cylinder(radio, [-.125, .16, .13], .032, .032, .012, '#D3B86E');
+    speakerCenter.rotation.x = Math.PI / 2;
+    for (const x of [.055, .16]) {
+      const knob = cylinder(radio, [x, .09, .122], .022, .022, .025, '#2F4843');
+      knob.rotation.x = Math.PI / 2;
+    }
+    const antenna = cylinder(radio, [.13, .45, -.03], .009, .009, .43, '#53645E');
+    antenna.rotation.z = -.3;
+    ball(radio, [.195, .66, -.03], [.018, .018, .018], '#D3B86E');
+    contactShadow(radio, .65, .42);
   }
 
   label(title: string, subtitle: string, width: number, height: number) {

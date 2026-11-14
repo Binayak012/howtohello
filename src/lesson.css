@@ -27,7 +27,8 @@
 .word-lesson .lesson-cta{display:flex;align-items:center;justify-content:center;gap:23px;border-radius:18px;font-size:14px;padding:11px 17px;min-height:49px;box-shadow:inset 0 2px 0 #ffffff40,0 4px 0 var(--teal-d),0 8px 15px #1f7a7a20}
 .lesson-cta span{margin:0!important}
 .lesson-cta span:last-child{display:grid;place-items:center;width:25px;height:25px;border-radius:9px;background:#ffffff24;font-size:18px}
-.reading-preference{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:15px;font-size:10px;color:var(--muted)}
+.reading-preference{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:15px;font-size:10px;color:var(--muted);flex-wrap:wrap}
+.reading-option{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .reading-preference button{font-size:10px;padding:5px 11px;border-radius:20px;background:var(--sunk);color:var(--muted)}
 .reading-preference button[aria-checked=true]{background:#E1EFE7;color:var(--teal-d)}
 .reading-toggle{font-size:15px;font-weight:750;letter-spacing:-.7px;padding:8px 11px;min-width:36px}
@@ -36,6 +37,7 @@
 .cue .target{line-height:1.4}
 .cue .latin-guide{display:block;color:var(--muted);font-size:18px;letter-spacing:.2px;font-weight:650;line-height:1.5}
 #app[data-reading-help=false] .latin-guide{display:none}
+#app[data-nepali-script=false] [lang=ne]{display:none}
 @media(max-width:560px){.word-lesson{padding:21px 16px}.word-lesson h1{font-size:27px}.word-lesson .script-intro{font-size:11px}.word-lesson .direction-map{gap:8px;grid-template-rows:repeat(3,104px);margin:13px auto}.direction-card{padding-left:5px;padding-right:5px;border-radius:20px}.direction-card .word-meaning{left:8px;font-size:8px;top:9px;letter-spacing:0}.direction-card .word-symbol{right:5px;top:5px;width:21px;height:21px;font-size:16px;border-radius:8px}.direction-card strong{font-size:32px;line-height:1.45}.direction-card small.latin-guide{font-size:14px}.direction-card .card-selected{width:13px;height:13px;right:5px;bottom:5px;font-size:8px}.word-detail{padding:9px 10px;gap:8px;min-height:49px}.word-lesson .word-detail .word-explanation{font-size:10px}.word-lesson .lesson-cta{font-size:13px}.reading-preference{font-size:9px;margin-top:14px}.header-actions{gap:6px}.reading-toggle{font-size:13px;min-width:30px;padding:7px 8px}.cue .latin-guide{font-size:17px}.cue{padding-top:8px;padding-bottom:8px}.reading-preference button{font-size:9px}}
 @media(max-height:580px) and (min-width:561px){.word-lesson{max-width:800px;column-gap:24px}.word-lesson .direction-map{grid-template-rows:repeat(3,99px);margin:0;grid-row:1/8}.word-detail,.reading-preference{grid-column:1}.word-detail{margin:8px 0 12px}.word-lesson .script-intro{margin-bottom:8px}.word-lesson .reading-preference{margin-top:12px}}
 /* Keep all four words and the reading preference visible on a laptop. */

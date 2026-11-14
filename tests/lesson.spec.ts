@@ -17,6 +17,12 @@ async function learn(page: Page, snapshots = false) {
   await expect(page.locator('.direction-backward strong')).toBeVisible();
   await page.getByRole('switch', { name:'Latin-letter guides' }).click();
   await expect(guide).toBeVisible();
+  const nepali = page.locator('.direction-backward strong');
+  await page.getByRole('switch', { name:'Nepali script' }).click();
+  await expect(nepali).toBeHidden();
+  await expect(page.locator('.direction-backward .word-meaning')).toBeVisible();
+  await page.getByRole('switch', { name:'Nepali script' }).click();
+  await expect(nepali).toBeVisible();
   await page.screenshot({ path: snapshots ? 'test-results/word-lesson.png' : 'test-results/word-lesson-small.png' });
   await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
   const words = ['दायाँ', 'बायाँ', 'अगाडि', 'पछाडि'];
@@ -32,6 +38,10 @@ async function learn(page: Page, snapshots = false) {
   await expect(page.locator('#pronunciation')).toBeHidden();
   await page.getByRole('button', { name:'Show Latin-letter guides' }).click();
   await expect(page.locator('#pronunciation')).toBeVisible();
+  await page.getByRole('button', { name:'Hide Nepali script' }).click();
+  await expect(page.locator('#target')).toBeHidden();
+  await page.getByRole('button', { name:'Show Nepali script' }).click();
+  await expect(page.locator('#target')).toBeVisible();
   await expect(page.locator('#position')).toContainText('Tile 4, 7 · Facing N');
 }
 async function follow(page: Page, player: Player, target: string) {
@@ -77,20 +87,49 @@ for (const phone of [false, true]) {
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
     await learn(page, !phone);
+    if (!phone) {
+      await page.evaluate(async () => {
+        const { effects } = await import('/src/main.ts');
+        const counts = { footsteps:0, bags:0, reactions:0, fruit:0, bottles:0, scans:0, complete:0 };
+        const footstep = effects.footstep.bind(effects), bagRustle = effects.bagRustle.bind(effects), reaction = effects.shopkeeperReaction.bind(effects);
+        const fruit = effects.fruitPickup.bind(effects), bottle = effects.bottlePickup.bind(effects), scan = effects.barcodeScan.bind(effects), complete = effects.levelComplete.bind(effects);
+        effects.footstep = () => { counts.footsteps++; footstep(); };
+        effects.bagRustle = () => { counts.bags++; bagRustle(); };
+        effects.shopkeeperReaction = () => { counts.reactions++; reaction(); };
+        effects.fruitPickup = () => { counts.fruit++; fruit(); };
+        effects.bottlePickup = () => { counts.bottles++; bottle(); };
+        effects.barcodeScan = () => { counts.scans++; scan(); };
+        effects.levelComplete = () => { counts.complete++; complete(); };
+        (window as typeof window & { __effectCounts?: typeof counts }).__effectCounts = counts;
+      });
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { footsteps:number } }).__effectCounts?.footsteps)).toBe(0);
+    }
     if (phone) await page.screenshot({ path:'test-results/phone-practice.png' });
     let player = await shop(page);
+    if (!phone) {
+      const counts = await page.evaluate(() => (window as typeof window & { __effectCounts?: { footsteps:number; bags:number; fruit:number; bottles:number } }).__effectCounts);
+      expect(counts?.footsteps).toBeGreaterThan(0);
+      expect(counts?.bags).toBe(1);
+      expect(counts?.fruit).toBe(2);
+      expect(counts?.bottles).toBe(1);
+    }
     await page.getByRole('button', { name:'Place items', exact:true }).click();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'scanning');
     await expect(page.locator('#results')).toBeHidden();
     await expect(page.getByRole('button', { name:'Step forward', exact:true })).toBeDisabled();
-    await expect(page.locator('#checkout-status')).toHaveAttribute('data-scanned', '1');
+    await expect(page.locator('#checkout-status')).toHaveAttribute('data-scanned', /[1-4]/);
     await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-checkout.png` });
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'collect', { timeout:12000 });
     await expect(page.locator('#checkout-status')).toHaveAttribute('data-scanned', '4');
+    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { scans:number } }).__effectCounts?.scans)).toBe(4);
     await expect(page.locator('#results')).toBeHidden();
     if (!phone) await page.screenshot({ path:'test-results/packed-bag.png' });
     await page.getByRole('button', { name:'Pick up bag', exact:true }).click();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'exit');
+    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { bags:number } }).__effectCounts?.bags)).toBe(3);
     await expect(page.locator('#basket')).toContainText('Carrying your packed shopping');
     await expect(page.locator('#results')).toBeHidden();
     // Restore scene focus after clicking the contextual action.
@@ -99,6 +138,12 @@ for (const phone of [false, true]) {
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'complete');
     await expect(page.locator('#results')).toContainText('Your first errand. Done.');
     await expect(page.locator('#results')).toContainText('8 first-try successes');
+    await expect(page.locator('.completion-medal')).toBeVisible();
+    await expect(page.locator('.completion-sparks i')).toHaveCount(16);
+    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { reactions:number } }).__effectCounts?.reactions)).toBe(3);
+    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { complete:number } }).__effectCounts?.complete)).toBe(1);
+    await page.waitForTimeout(750);
+    expect(await page.evaluate(async () => !(await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(true);
     await page.screenshot({ path:`test-results/${phone ? 'phone' : 'desktop'}-complete.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(errors).toEqual([]);
@@ -107,6 +152,56 @@ for (const phone of [false, true]) {
     await expect(page.locator('#basket')).toHaveAttribute('data-count', '0');
   });
 }
+
+test('radio is positional, keyboard controlled, persistent, and single-sourced across restarts', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('radio-test-started')) {
+      localStorage.removeItem('wayword.radio.enabled');
+      sessionStorage.setItem('radio-test-started', 'true');
+    }
+  });
+  await page.goto('/');
+  const toggle = page.getByRole('button', { name:'Turn radio off' });
+  await expect(toggle).toHaveAttribute('data-state', 'on', { timeout:15000 });
+  expect(await page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(false);
+  await page.getByRole('button', { name:'Learn the four words' }).click();
+  expect(await page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(false);
+  await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
+  await expect.poll(() => page.evaluate(async () => (await import('/src/main.ts')).radio.sound?.isPlaying)).toBe(true);
+  const audio = await page.evaluate(async () => {
+    const { radio, scene } = await import('/src/main.ts');
+    const sound = radio.sound;
+    return {
+      positional: !!sound && 'panner' in sound,
+      listenerOnCamera: radio.listener?.parent === scene?.camera,
+      sourceOnRadio: sound?.parent === scene?.radioAnchor,
+      sourceCount: scene?.radioAnchor.children.filter(child => child === sound).length,
+      playing: sound?.isPlaying,
+      refDistance: sound && 'panner' in sound ? sound.getRefDistance() : 0,
+      rolloff: sound && 'panner' in sound ? sound.getRolloffFactor() : 0,
+      distanceModel: sound && 'panner' in sound ? sound.getDistanceModel() : '',
+      maxDistance: sound && 'panner' in sound ? sound.getMaxDistance() : 0,
+      maxVolume: sound?.gain.gain.value,
+    };
+  });
+  expect(audio).toMatchObject({ positional:true, listenerOnCamera:true, sourceOnRadio:true, sourceCount:1, playing:true, refDistance:.8, rolloff:1, distanceModel:'linear', maxDistance:7 });
+  expect(audio.maxVolume).toBeLessThanOrEqual(.24);
+
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name:'Turn radio on' })).toHaveAttribute('aria-pressed', 'false');
+  await page.reload();
+  await expect(page.getByRole('button', { name:'Turn radio on' })).toHaveAttribute('data-state', 'off');
+  await page.getByRole('button', { name:'Turn radio on' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', { name:'Turn radio off' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name:'Start over' }).click({ force:true });
+  await page.getByRole('button', { name:'Start over' }).click({ force:true });
+  expect(await page.evaluate(async () => {
+    const { radio, scene } = await import('/src/main.ts');
+    return scene?.radioAnchor.children.filter(child => child === radio.sound).length;
+  })).toBe(1);
+});
 
 test('restart during scanning cancels packing and restores all shelf units', async ({ page }) => {
   await learn(page);
