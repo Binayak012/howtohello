@@ -1,5 +1,6 @@
 import { setupMapMusic, mapMusicButton } from './map-music';
 import {mapNatureMarkup} from './map-nature';
+import {setupMapIntroAudio,setupMapNodeClickAudio} from './map-intro-audio';
 import {isBasicUnlocked} from '../../src/unit-unlock';
 import {recordLanguageStarted} from '../../src/learning-history';
 import {completedLevels,isUnlocked,journey} from '../../src/progression';
@@ -23,6 +24,8 @@ export function renderLevelMap(app:HTMLDivElement,brand:string){
   }).join('')}</section><section class="journey-current-quest" aria-label="Your next playable lesson"><div class="journey-current-copy"><small>${completed.includes(active.id)?'READY TO REPLAY':'YOUR NEXT QUEST'} · CHAPTER ${String(active.chapter).padStart(2,'0')}</small><strong>${active.title}</strong><a class="journey-basic-link" href="/unit/index.html">${basicOpen?'Practice Nepali letters':'Start with five Nepali letters'} ↗</a></div><a class="button primary" href="${activeHref}">${activeCta} <span aria-hidden="true">↗</span></a></section><p class="map-progress-note">${canSave?'Progress saved on this browser':'Progress saving unavailable'} · Four chapters · The market is the finale</p></main>`;
   const stopMusic = setupMapMusic(app.querySelector<HTMLButtonElement>('.map-music')!);
   const map=app.querySelector<HTMLElement>('.quest-map')!,trail=app.querySelector<SVGSVGElement>('.map-trail')!;
+  const stopIntroAudio=setupMapIntroAudio();
+  const stopNodeClickAudio=setupMapNodeClickAudio();
   const align=()=>{const bounds=map.getBoundingClientRect(),nodes=[...map.querySelectorAll('.level-node')].map(node=>{const rect=node.getBoundingClientRect();return{x:rect.left+rect.width/2-bounds.left,y:rect.top+rect.height/2-bounds.top};});trail.setAttribute('viewBox',`0 0 ${bounds.width} ${bounds.height}`);let path=`M${nodes[0].x} ${nodes[0].y}`;for(let i=1;i<nodes.length;i++){const a=nodes[i-1],b=nodes[i],gap=(a.y-b.y)/2;path+=` C${a.x} ${a.y-gap} ${b.x} ${b.y+gap} ${b.x} ${b.y}`;}trail.querySelectorAll('path').forEach(element=>element.setAttribute('d',path));};
   const observer=new ResizeObserver(align);observer.observe(map);align();
   const pauseNature = () => map.classList.toggle('is-nature-paused', document.hidden);
@@ -95,6 +98,8 @@ export function renderLevelMap(app:HTMLDivElement,brand:string){
   reducedMotion.addEventListener('change', finishEntrance);
   return () => {
     stopMusic();
+    stopIntroAudio();
+    stopNodeClickAudio();
     document.removeEventListener('visibilitychange', pauseNature);
     document.body.classList.remove('is-map-screen','is-journey-screen');
     observer.disconnect();

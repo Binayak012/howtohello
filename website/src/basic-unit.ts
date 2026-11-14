@@ -3,6 +3,7 @@ import { unitDoorMarkup } from './unit-door';
 import { pencilSvg } from './pencil';
 import { writingLessons } from './writing-strokes';
 import { setupWritingGuide } from './writing-guide';
+import { setupTraceCelebration } from './trace-celebration';
 import { basicPasscode, evaluateTrace, isBasicUnlocked, saveBasicUnlock, validPasscode } from '../../src/unit-unlock';
 import { completedLevels, isUnlocked, journey } from '../../src/progression';
 
@@ -14,9 +15,11 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
   let disposed = false;
   let index = 0;
   let cleanupDrawing = () => {};
+  let cleanupCelebration = () => {};
   const header = `<header class="nav wrap map-nav unit-nav">${brand}<a class="back-link" href="/map/index.html">← Back to map</a></header>`;
   function lessons() {
     document.body.classList.remove('is-tracing-screen');
+    cleanupCelebration();
     cleanupDrawing();
     app.innerHTML = `${header}<main class="basic-unit-page wrap"><div class="basic-unit-heading"><p class="eyebrow">BASIC · DOOR UNLOCKED</p><h1>Your neighborhood<span class="unit-open-badge">✓</span></h1><p>Four chapters. One little beginning.</p><button type="button" class="text-button" id="practice-writing">Practice writing ↻</button></div><ol class="basic-lessons">${journey.map(level => {
       const finished = completed.includes(level.id);
@@ -27,6 +30,7 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
   }
   function door() {
     document.body.classList.add('is-tracing-screen');
+    cleanupCelebration();
     cleanupDrawing();
     app.innerHTML = `${header}<main class="door-page wrap"><aside class="door-story"><p class="eyebrow">UNIT 01 · BASIC</p><h1>A few letters.<br>A door opens.</h1><p>Trace the first five Nepali vowels to unlock Basic and begin your four-chapter neighborhood story.</p>${unitDoorMarkup}<div class="door-code" aria-label="Passcode progress">${basicPasscode.map((letter, i) => `<span data-code="${i}" class="${i === index ? 'is-current' : ''}" lang="ne">${letter}</span>`).join('')}</div><p class="door-footnote">A little practice is your key.</p></aside><section class="door-writing" aria-labelledby="trace-title"><p class="eyebrow" id="trace-step">LETTER 1 OF 5</p><div class="trace-letter-heading"><h2 id="trace-title">Trace <span lang="ne">अ</span> to begin</h2><button type="button" class="letter-speaker" id="hear-letter" aria-label="Hear अ pronounced in Nepali">${speakerIcon}</button></div><p id="letter-pronunciation" class="letter-pronunciation"></p><span id="letter-sound-status" class="sr-only" role="status" aria-live="polite"></span><p class="trace-instructions" id="trace-instructions">Follow the pencil. Start at the gold dot and lift between strokes.</p><button type="button" class="text-button trace-tutorial-open">How to trace ↗</button><div class="trace-board"><canvas id="trace-target" width="280" height="240" aria-hidden="true"></canvas><canvas id="trace-ink" width="280" height="240" tabindex="0" aria-label="Trace the displayed Nepali letter with your mouse. A keyboard alternative is available below." aria-describedby="trace-instructions"></canvas></div><div class="trace-actions"><button class="text-button" id="trace-clear" type="button">Clear strokes ↺</button><button class="button primary" id="trace-check" type="button">Check letter <span aria-hidden="true">✓</span></button></div><p class="trace-feedback" id="trace-feedback" role="status" aria-live="polite">Follow the pale letter, including the top line.</p><details class="trace-alternative"><summary>Use a keyboard instead</summary><form id="door-keyboard"><label for="door-passcode">Enter the five letters in order</label><p lang="ne" class="keyboard-code">अ आ इ ई उ</p><input id="door-passcode" name="passcode" lang="ne" autocomplete="off" spellcheck="false" required aria-describedby="keyboard-help"><p id="keyboard-help">Use a Nepali keyboard. Spaces between letters are optional.</p><button class="button primary" type="submit">Unlock Basic ↗</button></form></details></section></main>`;
     app.insertAdjacentHTML('beforeend', `<dialog class="writing-tutorial" aria-labelledby="writing-tutorial-title"><div class="tutorial-pencil" aria-hidden="true">${pencilSvg}</div><p class="eyebrow">A LITTLE WRITING WARM-UP</p><h2 id="writing-tutorial-title">Meet your pencil.</h2><p>Watch how each letter is built, one stroke at a time.</p><ol><li><span class="tutorial-dot">1</span><div><strong>Find your starting point</strong><p>The gold dot marks where the next stroke begins.</p></div></li><li><span>↗</span><div><strong>Follow the pencil</strong><p>Hold the mouse button and draw along the pale guide.</p></div></li><li><span>↥</span><div><strong>Lift, then begin again</strong><p>Release the mouse between strokes. Replay a numbered step whenever you need.</p></div></li></ol><button type="button" class="button primary" id="tutorial-watch">Show me the first letter <span aria-hidden="true">↗</span></button><button type="button" class="text-button" id="tutorial-skip">I’m ready to try</button></dialog>`);
@@ -58,7 +62,9 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
     const context = ink.getContext('2d')!;
     const feedback = app.querySelector<HTMLElement>('#trace-feedback')!;
     const check = app.querySelector<HTMLButtonElement>('#trace-check')!;
-    const pronunciation = setupLetterPronunciation(app.querySelector<HTMLElement>('.door-writing')!);
+    const celebration = setupTraceCelebration(app, !unlocked);
+    cleanupCelebration = () => celebration.dispose();
+    const pronunciation = setupLetterPronunciation(app.querySelector<HTMLElement>('.door-writing')!, playing => celebration.setPronunciationPlaying(playing));
     let pointer: number | null = null;
     let last: { x: number; y: number } | null = null;
     let passed = false;
@@ -127,25 +133,29 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
       });
       if (result.accepted && missingStroke >= 0) {
         feedback.textContent = `Finish stroke ${missingStroke + 1}. ${writingLessons[index].strokes[missingStroke].instruction}`;
+        celebration.mistake();
         return;
       }
       if (!result.accepted) {
         feedback.textContent = result.precision < .78 ? 'Stay a little closer to the pale letter. Clear your strokes and try again.' : 'Almost there. Trace the rest of the letter, including its top line.';
+        celebration.mistake();
         return;
       }
       passed = true;
       app.querySelector(`[data-code="${index}"]`)!.classList.add('is-done');
       feedback.textContent = index === 4 ? 'All five letters complete. Your door is ready to open.' : 'Nice! That letter is your next piece of the passcode.';
-      check.textContent = index === 4 ? 'Unlock Basic ↗' : 'Next letter →';
+      celebration.acceptLetter(index, index === 4);
+      if (index === 4) { unlock(); return; }
+      check.textContent = 'Next letter →';
     };
     app.querySelector<HTMLFormElement>('#door-keyboard')!.onsubmit = event => {
       event.preventDefault();
       const value = app.querySelector<HTMLInputElement>('#door-passcode')!.value;
-      if (validPasscode(value)) unlock();
+      if (validPasscode(value)) { celebration.completeWithKeyboard(); unlock(); }
       else feedback.textContent = 'Use the five letters in this order: अ आ इ ई उ.';
     };
     cleanupDrawing = () => { pronunciation.dispose(); tutorial.onclose = null; tutorial.close(); guide.dispose(); endStroke(); ink.onpointerdown = null; ink.onpointermove = null; ink.onpointerup = null; ink.onpointercancel = null; ink.onlostpointercapture = null; };
   }
   if (unlocked) lessons(); else door();
-  return () => { disposed = true; document.body.classList.remove('is-tracing-screen'); cleanupDrawing(); };
+  return () => { disposed = true; document.body.classList.remove('is-tracing-screen'); cleanupCelebration(); cleanupDrawing(); };
 }

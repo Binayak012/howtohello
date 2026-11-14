@@ -58,6 +58,96 @@ test('direct route entry and reduced-motion navigation work', async ({ page }) =
   }
 });
 
+test('the map intro plays once and stops before chapter audio can begin', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('wayword.progress.ne.v1', '["moving-in"]');
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value() {
+        if (this instanceof HTMLMediaElement && this.src.endsWith('/audio/map-intro.wav')) {
+          sessionStorage.setItem('map-intro-plays', String(Number(sessionStorage.getItem('map-intro-plays')) + 1));
+        }
+        if (this instanceof HTMLMediaElement && this.src.endsWith('/audio/map-node-click.wav')) {
+          sessionStorage.setItem('map-node-clicks', String(Number(sessionStorage.getItem('map-node-clicks')) + 1));
+        }
+        return Promise.resolve();
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+      configurable: true,
+      value() {
+        if (this instanceof HTMLMediaElement && this.src.endsWith('/audio/map-intro.wav')) {
+          sessionStorage.setItem('map-intro-pauses', String(Number(sessionStorage.getItem('map-intro-pauses')) + 1));
+        }
+      },
+    });
+  });
+  await page.goto('/map/');
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('map-intro-plays')))).toBe(1);
+  await page.locator('.journey-map-intro').click();
+  await page.mouse.wheel(0, 300);
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-intro-plays')))).toBe(1);
+  await page.locator('.journey-level-3 .level-node').dispatchEvent('pointerdown', { button: 0 });
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-node-clicks')))).toBe(1);
+  await page.getByRole('link', { name: 'Replay level 1' }).click();
+  await expect(page).toHaveURL(/\/game\/index.html\?level=moving-in$/);
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-node-clicks')))).toBe(2);
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-intro-pauses')))).toBeGreaterThan(0);
+});
+
+test('blocked map audio retries once on the first eligible interaction', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value() {
+        if (!(this instanceof HTMLMediaElement) || !this.src.endsWith('/audio/map-intro.wav')) return Promise.resolve();
+        const attempts = Number(sessionStorage.getItem('map-intro-attempts')) + 1;
+        sessionStorage.setItem('map-intro-attempts', String(attempts));
+        return attempts === 1 ? Promise.reject(new DOMException('Autoplay blocked', 'NotAllowedError')) : Promise.resolve();
+      },
+    });
+  });
+  await page.goto('/map/');
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('map-intro-attempts')))).toBe(1);
+  await page.locator('.journey-map-intro').click();
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('map-intro-attempts')))).toBe(2);
+  await page.locator('.journey-map-intro').click();
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-intro-attempts')))).toBe(2);
+});
+
+test('the map sound stays silent while hidden and visibility alone does not start it', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value() {
+        sessionStorage.setItem('hidden-map-plays', String(Number(sessionStorage.getItem('hidden-map-plays')) + 1));
+        return Promise.resolve();
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, 'pause', {
+      configurable: true,
+      value() {
+        sessionStorage.setItem('hidden-map-pauses', String(Number(sessionStorage.getItem('hidden-map-pauses')) + 1));
+      },
+    });
+  });
+  await page.goto('/map/');
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('hidden-map-plays')))).toBe(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('hidden-map-plays')))).toBe(0);
+  await page.locator('.journey-map-intro').click();
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('hidden-map-plays')))).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('hidden-map-pauses')))).toBeGreaterThan(0);
+});
+
 test('the unlocked market opens its number introduction from the map', async ({ page }) => {
   await page.emulateMedia({ reducedMotion:'reduce' });
   await page.addInitScript(() => localStorage.setItem('wayword.progress.ne.v1', '["little-shop"]'));
