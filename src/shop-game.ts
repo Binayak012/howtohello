@@ -23,7 +23,7 @@ const practice: Move[] = ['right', 'left', 'forward', 'backward'];
 const app = document.querySelector<HTMLDivElement>('#app')!;
 try { recordLanguageStarted(localStorage, 'ne'); } catch { /* Optional browser-local learning history. */ }
 app.innerHTML = `
-  <header class="masthead"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><span class="chapter">THE LITTLE SHOP · CHAPTER 03</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
+  <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 03</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
     <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="round" aria-label="Show a navigation hint">?</button></div>
@@ -90,7 +90,7 @@ function showStory() {
     el('begin').focus();
   };
   el('begin').onclick = showWords;
-  el('shop-greeting').focus();
+  el('welcome-title').focus({preventScroll:true});
 }
 function showWords() {
   phase = 'learn'; render();
@@ -109,7 +109,7 @@ function showWords() {
     phase = 'practice'; el('welcome').hidden = true; render(); focusScene(); resetIdle();
     say('Let’s try it together.', pack.directions.right.lesson);
   };
-  el('begin').focus();
+  el('welcome-title').focus({preventScroll:true});
 }
 function navigationMove(): Move {
   const target = phase === 'exit' ? 'door' : 'at:4,3,N';
@@ -326,7 +326,7 @@ function openNumberLesson() {
   }, () => {
     numberLesson?.dispose(); numberLesson = undefined;
     if(explorer || numberLearned) startExploring();
-    else {el('market-arrival').hidden = false; el('market-learn').focus();}
+    else {el('market-arrival').hidden = false; el('market-title').focus({preventScroll:true});}
   });
 }
 el('market-learn').onclick=openNumberLesson;
@@ -340,9 +340,9 @@ function finish() {
   const mastered = outcomes.filter(outcome => !outcome.misses && !outcome.helped).length;
   const celebration = Array.from({ length: 16 }, (_, i) => `<i style="--angle:${i * 22.5}deg;--distance:${54 + i % 3 * 14}px;--delay:${i % 4 * 45}ms">${i % 3 ? '✦' : '●'}</i>`).join('');
   el('results').hidden = false;
-  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 03 · COMPLETE</div><h2>Your first errand. Done.</h2><p>You found your items, checked out, and packed your shopping. A new adventure waits beyond the door.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="next-level" class="primary">Next level <span aria-hidden="true">↗</span></button><button id="again" class="quiet">Play the story again</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
+  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 03 · COMPLETE</div><h2 id="shop-complete-title" tabindex="-1">Your first errand. Done.</h2><p>You found your items, checked out, and packed your shopping. A new adventure waits beyond the door.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><button id="next-level" class="primary">Next level <span aria-hidden="true">↗</span></button><button id="again" class="quiet">Play the story again</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
   el('next-level').onclick = beginDeparture;
-  el('again').onclick = restart; el('next-level').focus(); say('A little more at home.', 'Four words you’ve put into practice. Choose Next level when you’re ready to step outside.');
+  el('again').onclick = restart; el('shop-complete-title').focus({preventScroll:true}); say('A little more at home.', 'Four words you’ve put into practice. Choose Next level when you’re ready to step outside.');
 
 }
 function restart() {

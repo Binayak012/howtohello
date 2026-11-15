@@ -408,3 +408,10 @@ body.is-tracing-screen .trace-letter-heading h2{margin:0}
 @keyframes letter-speaking{0%,100%{opacity:.5}50%{opacity:1}}
 @media(max-width:700px){.letter-speaker{width:34px;height:34px}.letter-speaker svg{width:18px;height:18px}.letter-pronunciation{font-size:10px;margin:4px 0 7px;gap:6px}.letter-pronunciation strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.letter-speaker.is-speaking .speaker-waves{animation:none}}
+
+/* Temporary hackathon shortcut; shares the tutorial row so tracing still fits. */
+.trace-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-shrink:0;margin:0 0 8px}
+body.is-tracing-screen .trace-tools .trace-tutorial-open{margin:0}
+.demo-trace-skip{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:29px;padding:5px 10px;border:1px solid #d9cce9;border-radius:999px;background:var(--lavtint);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer}
+.demo-trace-skip:hover{background:#ded3ef;color:var(--ink)}
+.writing-tutorial>.demo-trace-skip{display:flex;width:fit-content;margin:17px auto 0}

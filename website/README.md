@@ -83,3 +83,7 @@ Written hints are approximate. Reference: https://pressbooks.bccampus.ca/nepali/
 ## Map music
 
 The map has an original, low-volume, 32-beat menu loop (a nostalgic music-box melody, warm retro chords, gently swaying arpeggios, and short stereo reverb at 68 BPM), generated locally with Web Audio. The floating music button remembers the on/off choice separately from transition sound. Browser autoplay rules may require a click to begin; the button then reads Play music. Playback suspends while the tab is hidden and fades/stops when leaving the map. No external music requests are made.
+
+## Temporary hackathon skip
+
+The tracing screen and its introductory tutorial include **Skip for demo**. This opens Basic without tracing and grants access only in this browser tab/session, using the existing session-storage unlock. It does not record letter mastery or complete any chapters. Normal tracing still persists its unlock as before. Set `VITE_DEMO_SKIP_TRACING=false` when running/building the website to hide this temporary control; the shortcut is isolated in `basic-unit.ts` for removal after the demo.
