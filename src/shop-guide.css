@@ -226,3 +226,33 @@
 #app #shelf-stock{position:fixed;left:50%;right:auto;bottom:220px;transform:translateX(-50%);max-width:calc(100vw - 32px);margin:0;padding:8px 14px;text-align:center;line-height:1.4}
 @media(max-width:560px){#app #shelf-stock{bottom:290px}}
 @media(max-height:580px) and (min-width:561px){#app #shelf-stock{bottom:182px}}
+
+/* Ask the shopkeeper the way (AI). */
+.scene-help{display:flex;gap:8px;align-items:flex-start}
+.ask-button span{background:var(--lavtint,#e9e4f6)!important}
+.ask-panel{position:absolute;z-index:4;top:150px;right:28px;width:min(340px,calc(100% - 36px));background:var(--card);border-radius:22px;box-shadow:var(--shadow-card);padding:14px 16px 12px}
+.ask-panel header{display:flex;justify-content:space-between;align-items:center}
+.ask-panel header strong{font-size:13px}
+.ask-close{width:28px;height:28px;border-radius:50%;background:var(--sunk);font-size:11px;padding:0}
+.ask-how{margin:8px 0;font-size:12px;color:var(--muted);line-height:1.5}
+.ask-how b{color:var(--ink);font-size:15px}
+.ask-how .latin-guide{font-size:11px}
+.ask-how small{display:block}
+.ask-reply:empty{display:none}
+.ask-you{margin:6px 0 4px;text-align:right;font-size:12px;color:var(--muted);font-style:italic}
+.ask-answer{display:grid;gap:2px;padding:9px 12px;border-radius:14px;background:#fff7e6;border:1px solid #f1d9a6}
+.ask-answer[data-success=true]{background:#ecf8ee;border-color:#b8e0c0}
+.ask-answer strong{font-size:18px;font-family:var(--font-target)}
+.ask-answer .latin-guide{font-size:11px;opacity:.75}
+.ask-answer small{font-size:12px;color:var(--muted)}
+.ask-tip{margin:4px 0 0;font-size:12px;font-weight:600}
+.ask-form{display:flex;gap:6px;margin-top:10px;padding:4px 4px 4px 12px;border-radius:999px;border:1.5px solid #e3d8c6;background:#fff}
+.ask-form:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px #1f7a7a2a}
+.ask-form input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:14px;color:inherit}
+.ask-form button{border-radius:999px;padding:7px 14px;background:var(--teal);color:#fff}
+.ask-status{margin:6px 0 0;font-size:11px;color:var(--muted)}
+.ask-status:empty{display:none}
+@media(max-width:800px){.ask-panel{top:auto;bottom:118px;right:18px;left:18px;width:auto}.ask-button{font-size:0!important;gap:0!important;padding:6px!important}}
+/* Keep the incoming conversation control clear of the mission column. */
+#app #ask-shopkeeper{position:fixed;right:24px;bottom:84px}
+@media(max-width:560px){#app #ask-shopkeeper{right:12px;bottom:156px}}

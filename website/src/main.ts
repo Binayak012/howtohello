@@ -10,6 +10,22 @@ import { setupAuthEntrance } from './auth-entrance';
 import { setupAuthGuide } from './auth-guide';
 import { startScrollWords } from './scroll-words';
 import { setupAdventureTransition } from './adventure-transition';
+import { cloudEnabled, currentUser, saveNow, sendPasswordReset, signIn, signOut, signUp, startCloudSync } from '../../src/cloud';
+
+// With accounts connected, bring this learner's saved progress into the browser before drawing any page.
+await startCloudSync();
+const accountNote = cloudEnabled
+  ? '<span>YOUR ACCOUNT</span> Your progress is saved to your account, so you can pick up on any device.'
+  : '<span>PLAYABLE DEMO</span> Use any demo email and a password of at least 8 characters, then choose your language. No account is created. Your details are never saved or sent.';
+/** Friendlier wording for the most common sign-in problems. */
+function accountError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/invalid login/i.test(message)) return 'That email and password don’t match an account. Check them, or create an account.';
+  if (/already registered/i.test(message)) return 'There’s already an account with that email. Try signing in instead.';
+  if (/email not confirmed/i.test(message)) return 'Please confirm your email first. Check your inbox for the link.';
+  if (/rate limit/i.test(message)) return 'Too many tries in a row. Wait a minute, then try again.';
+  return `Something went wrong: ${message}`;
+}
 const app = document.querySelector<HTMLDivElement>('#app')!;
 const brand = '<a class="brand" href="/" aria-label="Wayword home"><span class="brand-icon" aria-hidden="true">w</span>wayword<span class="dot">.</span></a>';
 const primary = '<a class="button primary" href="/auth/?mode=signup">Start your adventure <span aria-hidden="true">↗</span></a>';
@@ -71,7 +87,7 @@ let mode = new URLSearchParams(location.search).get('mode') === 'signup' ? 'sign
 function renderAuth() {
 stopAuthGuide();
 const signup = mode === 'signup';
-app.innerHTML = `<a class="skip" href="#auth-main">Skip to content</a><header class="nav wrap">${brand}<a class="back-link" href="/">← Back to the neighborhood</a></header><main id="auth-main" class="auth-layout wrap"><aside class="auth-story"><p class="eyebrow">YOUR NEXT LITTLE ADVENTURE</p><h1>A familiar face.<br>A new beginning.</h1><p>Every new word opens a little door.<br>Let’s see where this one takes you.</p><div class="auth-illustration"><span class="auth-halo"></span><div class="auth-character"><img class="auth-open-eyes" src="/assets/traveler-gesture.svg" alt="Your friendly traveler guide holding a pen"><img class="auth-closed-eyes" src="/assets/traveler-eyes-closed.svg" alt="" aria-hidden="true"><span class="auth-held-pen" aria-hidden="true">${pencilSvg}</span></div><span class="speech">You’ve got this.</span><span class="auth-star" aria-hidden="true">✦</span></div><p class="aside-caption">A little language. A whole new world.</p></aside><section class="auth-card" aria-labelledby="auth-title"><span class="mini-mark" aria-hidden="true">✦</span><p class="eyebrow">${signup ? 'MAKE YOURSELF AT HOME' : 'GOOD TO SEE YOU AGAIN'}</p><h2 id="auth-title">${signup ? 'Your story starts here.' : 'Welcome back.'}</h2><p class="auth-subtitle">${signup ? 'Try the demo. Your first quest is waiting.' : 'Jump back into the playable demo.'}</p><div class="auth-tabs" aria-label="Account action"><button type="button" data-mode="login" aria-pressed="${!signup}">Log in</button><button type="button" data-mode="signup" aria-pressed="${signup}">Sign up</button></div><form id="auth-form"><div class="auth-name-row ${signup ? 'is-visible' : ''}" ${signup ? '' : 'inert'}><div><label for="name">Your name</label><input id="name" name="name" autocomplete="given-name" placeholder="What should we call you?" ${signup ? 'required' : 'disabled'} maxlength="80"></div></div><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><div class="password-label"><label for="password">Password</label><button type="button" class="text-button" id="forgot" ${signup ? 'hidden' : ''}>Forgot password?</button></div><div class="password-field"><input id="password" name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" placeholder="${signup ? 'At least 8 characters' : 'Enter your password'}" minlength="8" required><button type="button" id="toggle-password" aria-label="Show password">Show</button></div><p class="field-help" id="password-help">${signup ? 'Use at least 8 characters.' : ''}</p><button class="button primary submit" type="submit">${signup ? 'Start your adventure' : 'Let’s keep going'} <span aria-hidden="true">↗</span></button><p id="form-status" role="status" aria-live="polite"></p></form><p class="preview-note"><span>PLAYABLE DEMO</span> Use any demo email and a password of at least 8 characters, then choose your language. No account is created. Your details are never saved or sent.</p><a class="explore-link" href="/#first-adventure">Explore the first adventure →</a></section></main><footer class="auth-footer">Small steps. A world of possibility.</footer>`;
+app.innerHTML = `<a class="skip" href="#auth-main">Skip to content</a><header class="nav wrap">${brand}<a class="back-link" href="/">← Back to the neighborhood</a></header><main id="auth-main" class="auth-layout wrap"><aside class="auth-story"><p class="eyebrow">YOUR NEXT LITTLE ADVENTURE</p><h1>A familiar face.<br>A new beginning.</h1><p>Every new word opens a little door.<br>Let’s see where this one takes you.</p><div class="auth-illustration"><span class="auth-halo"></span><div class="auth-character"><img class="auth-open-eyes" src="/assets/traveler-gesture.svg" alt="Your friendly traveler guide holding a pen"><img class="auth-closed-eyes" src="/assets/traveler-eyes-closed.svg" alt="" aria-hidden="true"><span class="auth-held-pen" aria-hidden="true">${pencilSvg}</span></div><span class="speech">You’ve got this.</span><span class="auth-star" aria-hidden="true">✦</span></div><p class="aside-caption">A little language. A whole new world.</p></aside><section class="auth-card" aria-labelledby="auth-title"><span class="mini-mark" aria-hidden="true">✦</span><p class="eyebrow">${signup ? 'MAKE YOURSELF AT HOME' : 'GOOD TO SEE YOU AGAIN'}</p><h2 id="auth-title">${signup ? 'Your story starts here.' : 'Welcome back.'}</h2><p class="auth-subtitle">${signup ? 'Try the demo. Your first quest is waiting.' : 'Jump back into the playable demo.'}</p><div class="auth-tabs" aria-label="Account action"><button type="button" data-mode="login" aria-pressed="${!signup}">Log in</button><button type="button" data-mode="signup" aria-pressed="${signup}">Sign up</button></div><form id="auth-form"><div class="auth-name-row ${signup ? 'is-visible' : ''}" ${signup ? '' : 'inert'}><div><label for="name">Your name</label><input id="name" name="name" autocomplete="given-name" placeholder="What should we call you?" ${signup ? 'required' : 'disabled'} maxlength="80"></div></div><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><div class="password-label"><label for="password">Password</label><button type="button" class="text-button" id="forgot" ${signup ? 'hidden' : ''}>Forgot password?</button></div><div class="password-field"><input id="password" name="password" type="password" autocomplete="${signup ? 'new-password' : 'current-password'}" placeholder="${signup ? 'At least 8 characters' : 'Enter your password'}" minlength="8" required><button type="button" id="toggle-password" aria-label="Show password">Show</button></div><p class="field-help" id="password-help">${signup ? 'Use at least 8 characters.' : ''}</p><button class="button primary submit" type="submit">${signup ? 'Start your adventure' : 'Let’s keep going'} <span aria-hidden="true">↗</span></button><p id="form-status" role="status" aria-live="polite"></p></form><p class="preview-note">${accountNote}</p><a class="explore-link" href="/#first-adventure">Explore the first adventure →</a></section></main><footer class="auth-footer">Small steps. A world of possibility.</footer>`;
 document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(button => button.onclick = () => {
   if (mode === button.dataset.mode) return;
   mode = button.dataset.mode!;
@@ -95,24 +111,60 @@ document.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(button => bu
   card.querySelector('#password-help')!.textContent = isSignup ? 'Use at least 8 characters.' : '';
   card.querySelector('.submit')!.innerHTML = `${isSignup ? 'Start your adventure' : 'Let’s keep going'} <span aria-hidden="true">↗</span>`;
   card.querySelector('#form-status')!.textContent = '';
-  card.querySelector('.preview-note')!.innerHTML = '<span>PLAYABLE DEMO</span> Use any demo email and a password of at least 8 characters, then choose your language. No account is created. Your details are never saved or sent.';
+  card.querySelector('.preview-note')!.innerHTML = accountNote;
   card.dispatchEvent(new Event('auth-mode-change', { bubbles: true }));
 });
 const password = document.querySelector<HTMLInputElement>('#password')!;
 document.querySelector<HTMLButtonElement>('#toggle-password')!.onclick = event => {const show = password.type === 'password'; password.type = show ? 'text' : 'password'; const button = event.currentTarget as HTMLButtonElement; button.textContent = show ? 'Hide' : 'Show'; button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');};
-document.querySelector<HTMLFormElement>('#auth-form')!.onsubmit = event => {
+document.querySelector<HTMLFormElement>('#auth-form')!.onsubmit = async event => {
   event.preventDefault();
-  // Demo entry only: credentials never leave this form or enter browser storage.
   const form = event.currentTarget as HTMLFormElement;
   if (!form.reportValidity()) return;
   const submit = form.querySelector<HTMLButtonElement>('.submit')!;
+  if (cloudEnabled) {
+    // Real accounts: sign up or sign in with Supabase, then bring saved progress into this browser.
+    const status = document.querySelector<HTMLElement>('#form-status')!;
+    const email = form.querySelector<HTMLInputElement>('#email')!.value.trim();
+    const secret = form.querySelector<HTMLInputElement>('#password')!.value;
+    const label = submit.innerHTML;
+    submit.disabled = true; submit.textContent = mode === 'signup' ? 'Creating your account…' : 'Signing you in…'; status.textContent = '';
+    try {
+      if (mode === 'signup') {
+        const { needsConfirmation } = await signUp(email, secret, form.querySelector<HTMLInputElement>('#name')!.value.trim());
+        if (needsConfirmation) { status.textContent = 'Almost there! Check your inbox for a confirmation link, then sign in.'; submit.disabled = false; submit.innerHTML = label; return; }
+      } else await signIn(email, secret);
+      await startCloudSync(10000); await saveNow();
+      form.reset();
+      document.dispatchEvent(new CustomEvent('wayword:navigate', { detail: { destination: '/languages/index.html' } }));
+    } catch (error) {
+      status.textContent = accountError(error); submit.disabled = false; submit.innerHTML = label;
+    }
+    return;
+  }
+  // Demo entry only: credentials never leave this form or enter browser storage.
   submit.disabled = true;
   submit.textContent = 'Let’s choose your language…';
   form.reset();
   document.dispatchEvent(new CustomEvent('wayword:navigate', { detail: { destination: '/languages/index.html' } }));
 };
 const forgot = document.querySelector<HTMLButtonElement>('#forgot');
-if (forgot) forgot.onclick = () => { document.querySelector('#form-status')!.textContent = 'Password reset will be available when authentication is connected. No reset email has been sent.'; };
+if (forgot) forgot.onclick = async () => {
+  const status = document.querySelector('#form-status')!;
+  if (!cloudEnabled) { status.textContent = 'Password reset will be available when authentication is connected. No reset email has been sent.'; return; }
+  const email = document.querySelector<HTMLInputElement>('#email')!.value.trim();
+  if (!email) { status.textContent = 'Type your email above first, then choose “Forgot password?” again.'; return; }
+  try { await sendPasswordReset(email); status.textContent = 'If that email has an account, a reset link is on its way.'; }
+  catch (error) { status.textContent = accountError(error); }
+};
+// Already signed in? Say so, and offer to continue or sign out.
+void currentUser().then(user => {
+  if (!user) return;
+  const status = document.querySelector<HTMLElement>('#form-status');
+  if (!status) return;
+  status.innerHTML = `You’re signed in as <strong></strong>. <a href="/map/index.html">Continue to your map ↗</a> · <button type="button" class="text-button" id="sign-out">Sign out</button>`;
+  status.querySelector('strong')!.textContent = user.email ?? 'your account';
+  status.querySelector<HTMLButtonElement>('#sign-out')!.onclick = async () => { await saveNow(); await signOut(); status.textContent = 'Signed out. Your progress stays saved in your account.'; };
+});
 stopAuthEntrance = setupAuthEntrance();
 stopAuthGuide = setupAuthGuide();
 }

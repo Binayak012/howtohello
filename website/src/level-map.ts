@@ -4,6 +4,7 @@ import {setupMapNodeClickAudio} from './map-node-audio';
 import {tracedLetters,canAccessLesson,canPracticeSet} from '../../src/tracing-progress';
 import {recordLanguageStarted} from '../../src/learning-history';
 import {completedLevels,isUnlocked,journey,levelHref} from '../../src/progression';
+import {currentUser} from '../../src/cloud';
 
 const ctas:Record<string,string>={'moving-in':'Start this quest','second-lesson':'Unpack your things',counting:'Learn to count',letters:'Start tracing','little-shop':'Run your errand','next-adventure':'Play the finale'};
 
@@ -32,6 +33,8 @@ export function renderLevelMap(app:HTMLDivElement,brand:string){
     return `<div class="map-level journey-level-${index+1} ${level.id===active.id?'is-current-quest':''}" style="left:${positions[index].x}%;top:${positions[index].y}%">${node}<div class="level-label"><small>${title} · ${finished?'COMPLETE':!level.implemented?'COMING NEXT':unlocked?'READY TO PLAY':'LOCKED'}</small><strong>${level.title}</strong><p>${level.subtitle}</p></div></div>`;
   }).join('')}</section><section class="journey-current-quest" aria-label="Your next playable lesson"><div class="journey-current-copy"><small>${completed.includes(active.id)?'READY TO REPLAY':'YOUR NEXT QUEST'} · CHAPTER ${String(active.chapter).padStart(2,'0')}</small><strong>${active.title}</strong><a class="journey-basic-link" href="/unit/index.html?set=${nextWritingSet}">Vowel practice · ${nextWritingCount}/5 · Before Lesson ${nextWritingSet==='first-five'?5:9} ↗</a></div><a class="button primary" href="${activeHref}">${activeCta} <span aria-hidden="true">↗</span></a></section><p class="map-progress-note">${canSave?'Progress saved on this browser':'Progress saving unavailable'} · Six chapters · The market is the finale</p></main>`;
   const stopMusic = setupMapMusic(app.querySelector<HTMLButtonElement>('.map-music')!);
+  // Signed in to an account? Say where progress lives.
+  void currentUser().then(user=>{const note=app.querySelector('.map-progress-note');if(user&&note)note.textContent=note.textContent!.replace('Progress saved on this browser','Progress saved to your account');});
   const map=app.querySelector<HTMLElement>('.quest-map')!,trail=app.querySelector<SVGSVGElement>('.map-trail')!;
   const stopNodeClickAudio=setupMapNodeClickAudio(app);
   const align=()=>{const bounds=map.getBoundingClientRect(),nodes=[...map.querySelectorAll('.level-node')].map(node=>{const rect=node.getBoundingClientRect();return{x:rect.left+rect.width/2-bounds.left,y:rect.top+rect.height/2-bounds.top};});trail.setAttribute('viewBox',`0 0 ${bounds.width} ${bounds.height}`);let path=`M${nodes[0].x} ${nodes[0].y}`;for(let i=1;i<nodes.length;i++){const a=nodes[i-1],b=nodes[i],gap=(a.y-b.y)/2;path+=` C${a.x} ${a.y-gap} ${b.x} ${b.y+gap} ${b.x} ${b.y}`;}trail.querySelectorAll('path').forEach(element=>element.setAttribute('d',path));};
