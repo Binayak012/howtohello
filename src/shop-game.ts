@@ -556,6 +556,7 @@ function beginDeparture() {
   if (phase !== 'complete' || !atShopDoor(player)) return;
   el('results').hidden = true;
   phase = 'departing'; busy = true; clearTimeout(idleTimer); clearTimeout(stuckTimer); render();
+  // Start the cue from this click gesture, after render’s setActive flip.
   effects.shopStreetTransition();
   el('market-journey').hidden = false;
   el('skip-journey').focus();

@@ -51,6 +51,8 @@ export class EffectsController {
   private effectGenerations = new Map<EffectName, number>();
   private sources = new Set<{ name: EffectName; source: AudioBufferSourceNode; gain: GainNode }>();
   private shopkeeper?: THREE.PositionalAudio;
+  /** Retry the door cue once audio unlocks if autoplay blocked the first try. */
+  private pendingShopStreetTransition = false;
 
   constructor(private listener?: THREE.AudioListener, shopkeeperAnchor?: THREE.Object3D) {
     if (listener) this.context = listener.context;
@@ -232,11 +234,69 @@ export class EffectsController {
     void this.play('cheer', 0.075, 0, 4.5, 1, true);
   }
 
-  /** Full vibraphone cue once when the shop door opens / “See you soon” caption appears. */
+  /**
+   * Vibraphone cue when the shop door opens / “See you soon” caption appears.
+   * Plays straight to the AudioContext destination so a setActive/generation
+   * flip during beginDeparture cannot swallow it, and so 3D listener routing
+   * cannot bury it under the door walk.
+   */
   shopStreetTransition() {
     if (this.hasActive('vibraphoneTransition')) return;
+    void this.playShopStreetTransition();
+  }
+
+  private async playShopStreetTransition() {
+    if (!this.context || this.disposed || this.hidden) return;
+    if (!this.buffers.has('vibraphoneTransition')) await this.load('vibraphoneTransition');
     const buffer = this.buffers.get('vibraphoneTransition');
-    void this.play('vibraphoneTransition', 0.2, 0, buffer?.duration ?? 11, 1, true);
+    if (!buffer || this.disposed || this.hidden) return;
+    try {
+      await this.context.resume();
+      if (this.disposed || this.hidden || !this.context) return;
+      if (this.context.state !== 'running') {
+        this.pendingShopStreetTransition = true;
+        this.addTransitionUnlock();
+        return;
+      }
+      this.pendingShopStreetTransition = false;
+      this.removeTransitionUnlock();
+      // Clear the chapter-complete stingers so the door cue is the clear signal.
+      this.stopEffect('complete');
+      this.stopEffect('cheer');
+      if (this.hasActive('vibraphoneTransition')) return;
+      const source = this.context.createBufferSource();
+      const gain = this.context.createGain();
+      source.buffer = buffer;
+      gain.gain.value = 0.48;
+      source.connect(gain);
+      gain.connect(this.context.destination);
+      const nodes = { name: 'vibraphoneTransition' as EffectName, source, gain };
+      this.sources.add(nodes);
+      source.onended = () => {
+        source.disconnect();
+        gain.disconnect();
+        this.sources.delete(nodes);
+      };
+      source.start(0, 0, Math.min(buffer.duration, 11));
+    } catch {
+      this.pendingShopStreetTransition = true;
+      this.addTransitionUnlock();
+    }
+  }
+
+  private transitionUnlock = () => {
+    if (!this.pendingShopStreetTransition || this.disposed) return;
+    void this.playShopStreetTransition();
+  };
+
+  private addTransitionUnlock() {
+    window.addEventListener('pointerdown', this.transitionUnlock, { capture: true, passive: true });
+    window.addEventListener('keydown', this.transitionUnlock, { capture: true });
+  }
+
+  private removeTransitionUnlock() {
+    window.removeEventListener('pointerdown', this.transitionUnlock, true);
+    window.removeEventListener('keydown', this.transitionUnlock, true);
   }
 
   cancel() {
@@ -360,6 +420,8 @@ export class EffectsController {
   dispose() {
     this.disposed = true;
     this.generation++;
+    this.pendingShopStreetTransition = false;
+    this.removeTransitionUnlock();
     this.clearBumpState();
     this.stopAll();
     document.removeEventListener('visibilitychange', this.onVisibilityChange);
