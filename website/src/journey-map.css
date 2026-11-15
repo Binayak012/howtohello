@@ -68,3 +68,11 @@ body.is-journey-screen .map-progress-note{position:absolute;bottom:max(8px,env(s
 @keyframes map-river-flow{from{stroke-dashoffset:0}to{stroke-dashoffset:-502}}
 .journey-map.is-nature-paused .nature-tree-wind,.journey-map.is-nature-paused .nature-flower-wind,.journey-map.is-nature-paused .nature-ripples,.journey-map.is-nature-paused .nature-river-current{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.nature-tree-wind,.nature-flower-wind,.nature-ripples,.nature-river-current{animation:none;transform:none}}
+
+/* A gentle lift and compression, with time for the wooden press sound. */
+.journey-map .level-node.playable{transition:transform .26s cubic-bezier(.22,.61,.36,1),box-shadow .26s ease}
+.journey-map .level-node.playable:hover{transform:rotate(-3deg) translateY(-3px)}
+.journey-map .level-node.playable:active,.journey-map .level-node.playable.is-lesson-pressed{transform:rotate(-3deg) translateY(3px) scale(.97);box-shadow:inset 0 2px 0 #ffffff40,0 2px 0 var(--teal-d),0 5px 10px #14545418}
+.journey-current-quest a.button.primary{transition:transform .24s cubic-bezier(.22,.61,.36,1),box-shadow .24s ease}
+.journey-current-quest a.button.primary:active,.journey-current-quest a.button.primary.is-lesson-pressed{transform:translateY(3px) scale(.98)}
+@media(prefers-reduced-motion:reduce){.journey-map .level-node.playable,.journey-current-quest a.button.primary{transition:none}.journey-map .level-node.playable:hover,.journey-map .level-node.playable:active,.journey-map .level-node.playable.is-lesson-pressed{transform:rotate(-7deg)}.journey-current-quest a.button.primary:active,.journey-current-quest a.button.primary.is-lesson-pressed{transform:none}}

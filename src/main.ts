@@ -1,14 +1,18 @@
-import { isBasicUnlocked } from './unit-unlock';
 import { completedLevels, isUnlocked } from './progression';
 import './tokens.css';
+import { canAccessLesson } from './tracing-progress';
+import { journey } from './progression';
 
 const requested = new URLSearchParams(location.search).get('level');
 let completed:ReturnType<typeof completedLevels>=[];
 try{completed=completedLevels(localStorage);}catch{/* The first level works without storage. */}
-let basicOpen=true;
-if(import.meta.env.BASE_URL==='/game/'&&completed.length===0){basicOpen=false;try{basicOpen=isBasicUnlocked(localStorage);}catch{}try{basicOpen ||= isBasicUnlocked(sessionStorage);}catch{}}
-if(!basicOpen){location.replace('/unit/index.html');}
-else if(requested==='shop'&&isUnlocked('little-shop',completed)||requested==='market'&&isUnlocked('next-adventure',completed)){
+const writingStores: Storage[] = [];
+try { writingStores.push(localStorage); } catch {}
+try { writingStores.push(sessionStorage); } catch {}
+const requestedLesson = journey.find(level => level.route === requested);
+if (requestedLesson && !canAccessLesson(requestedLesson.chapter, writingStores)) {
+  location.replace('/unit/index.html');
+} else if(requested==='shop'&&isUnlocked('little-shop',completed)||requested==='market'&&isUnlocked('next-adventure',completed)){
   await import('./shop-game');
 }else if(requested==='second-lesson'&&isUnlocked('second-lesson',completed)){
   const {startUnpacking}=await import('./unpacking');startUnpacking();
@@ -21,3 +25,28 @@ else if(requested==='shop'&&isUnlocked('little-shop',completed)||requested==='ma
 }else{
   const {startMovingIn}=await import('./moving-in');startMovingIn();
 }
+
+// Reveal the world and UI separately so objects do not appear all at once.
+if (import.meta.env.BASE_URL === '/game/' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const app = document.querySelector('#app')!;
+  const reveal = (selector: string, duration: number, delay = 0) => {
+    app.querySelectorAll<HTMLElement>(selector).forEach(element => {
+      element.animate([{opacity:0},{opacity:1}], {
+        duration, delay, easing:'cubic-bezier(.22,.61,.36,1)', fill:'backwards',
+      });
+    });
+  };
+  // Keep the canvas intact: fading its container works for all scene objects,
+  // including transparent sprites, without changing their materials.
+  reveal('#arrival-world, #scene', 520);
+  reveal('.arrival-header, .masthead', 300, 30);
+  reveal('.arrival-overlay, .welcome, .market-arrival:not([hidden])', 420, 70);
+  reveal('.arrival-journal, .arrival-pocket, .scene-top', 380, 60);
+}
+
+// Keep useful feedback on screen until the lesson has rendered its first frame.
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  const opening = document.querySelector('#lesson-opening');
+  opening?.classList.add('is-ready');
+  window.setTimeout(() => opening?.remove(), 200);
+}));

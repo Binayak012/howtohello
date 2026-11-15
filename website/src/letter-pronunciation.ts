@@ -1,9 +1,18 @@
-export const vowelSounds = [
+export const vowelSounds: {letter:string;roman:string;hint:string;clip:string|null}[] = [
   { letter: 'अ', roman: 'a', hint: 'A short, relaxed “uh” sound.', clip: 'a' },
   { letter: 'आ', roman: 'ā · aa', hint: 'An open “ah” sound, like the a in father.', clip: 'aa' },
   { letter: 'इ', roman: 'i', hint: 'An “ee” sound, like the ee in see.', clip: 'i' },
   { letter: 'ई', roman: 'ī · ee', hint: 'Like इ in everyday Nepali; a different spelling.', clip: 'ii' },
   { letter: 'उ', roman: 'u', hint: 'Round your lips for a soft “oo” sound.', clip: 'u' },
+  {letter:'ऊ',roman:'ū · oo',hint:'The long-u vowel spelling.',clip:null},
+  {letter:'ए',roman:'e',hint:'Say “e” as in the start of “eight,” without a trailing glide.',clip:null},
+  {letter:'ऐ',roman:'ai',hint:'The vowel ऐ; compare its upper mark with ए.',clip:null},
+  {letter:'ओ',roman:'o',hint:'The vowel ओ; notice the mark above आ.',clip:null},
+  {letter:'औ',roman:'au',hint:'The vowel औ; notice the two marks above आ.',clip:null},
+  {letter:'अं',roman:'aṃ · am',hint:'अ with anusvara: notice the dot above.',clip:null},
+  {letter:'अः',roman:'aḥ · ah',hint:'अ with visarga: notice the two dots to the right.',clip:null},
+  {letter:'ऋ',roman:'ṛ · ri',hint:'The vocalic-r letter, often encountered in Sanskrit-derived words.',clip:null},
+  {letter:'ॠ',roman:'ṝ · rī',hint:'The extended vocalic-r letter from your chart.',clip:null},
 ];
 export const speakerIcon = `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4V4Z"/><path class="speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg>`;
 
@@ -34,12 +43,20 @@ export function setupLetterPronunciation(root: HTMLElement, onPlaybackChange: (p
     button.setAttribute('aria-label', `Hear ${sound.letter} pronounced in Nepali`);
     button.title = `Listen to ${sound.letter}`;
     status.textContent = '';
-    audio.src = `/audio/ne/${sound.clip}.wav`;
-    audio.playbackRate = 1.4;
-    audio.load();
+    button.disabled = !sound.clip;
+    if (sound.clip) {
+      audio.src = `/audio/ne/${sound.clip}.wav`;
+      audio.playbackRate = 1.4;
+      audio.load();
+    } else {
+      audio.removeAttribute('src');
+      button.title = 'Pronunciation recording coming soon';
+      button.setAttribute('aria-label', `Recording for ${sound.letter} coming soon`);
+      description.innerHTML += '<small>Pronunciation recording coming soon</small>';
+    }
   }
   button.onclick = async () => {
-    if (disposed) return;
+    if (disposed || !vowelSounds[index].clip) return;
     const request = ++revision;
     audio.pause(); audio.currentTime = 0;
     button.setAttribute('aria-busy', 'true');

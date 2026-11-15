@@ -3,6 +3,11 @@ type CelebrationKind = 'letter' | 'complete' | 'mistake';
 export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   const successAudio = new Audio('/audio/trace-success.wav');
   const completeAudio = new Audio('/audio/trace-complete.wav');
+  const pencilAudio = new Audio('/audio/pencil-strokes-continuous.wav');
+  pencilAudio.preload = 'auto'; pencilAudio.loop = true; pencilAudio.volume = .42;
+  const soundButton = root.querySelector<HTMLButtonElement>('.trace-effects-toggle');
+  let effectsMuted = false;
+  try { effectsMuted = localStorage.getItem('wayword.tracing.effects-muted') === 'true'; } catch {}
   [successAudio, completeAudio].forEach(audio => { audio.preload = 'auto'; audio.volume = .34; });
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   const celebrated = new Set<number>();
@@ -12,9 +17,11 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   let feedbackContext: AudioContext | null = null;
   let mistakeMaster: GainNode | null = null;
   let mistakeVoices: OscillatorNode[] = [];
-  let scratchSource: AudioBufferSourceNode | null = null;
-  let scratchGain: GainNode | null = null;
-  let scratchIdleTimer: number | undefined;
+  let pencilSource: MediaElementAudioSourceNode | null = null;
+  let pencilGain: GainNode | null = null;
+  let pencilIdleTimer: number | undefined;
+  let pencilPauseTimer: number | undefined;
+  let pencilPlaying = false;
   let pronunciationPlaying = false;
   let completed = false;
   let disposed = false;
@@ -44,17 +51,15 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   }
 
   function stopPencil() {
-    window.clearTimeout(scratchIdleTimer);
-    scratchIdleTimer = undefined;
-    if (!feedbackContext || !scratchSource || !scratchGain) return;
-    const source = scratchSource;
-    const gain = scratchGain;
-    const now = feedbackContext.currentTime;
-    gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(0, now);
-    try { source.stop(now); } catch { /* Already stopped. */ }
-    scratchSource = null;
-    scratchGain = null;
+    window.clearTimeout(pencilIdleTimer);
+    window.clearTimeout(pencilPauseTimer);
+    pencilPlaying = false;
+    if (feedbackContext && pencilGain) {
+      const now = feedbackContext.currentTime;
+      pencilGain.gain.cancelScheduledValues(now);
+      pencilGain.gain.setTargetAtTime(0, now, .009);
+      pencilPauseTimer = window.setTimeout(() => pencilAudio.pause(), 40);
+    } else pencilAudio.pause();
   }
 
   function stopAudio() {
@@ -109,50 +114,36 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   }
 
   function pencilMoved(distance: number) {
-    if (disposed || pronunciationPlaying || document.visibilityState !== 'visible' || distance < .35) return;
+    if (disposed || effectsMuted || pronunciationPlaying || document.hidden || distance < .35) return;
     if (pendingAudio === 'mistake') pendingAudio = null;
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      currentAudio = null;
-    }
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     stopMistake();
     const audioContext = context();
     if (!audioContext) return;
-    if (!scratchSource || !scratchGain) {
-      const source = audioContext.createBufferSource();
-      const sampleCount = Math.ceil(audioContext.sampleRate * .18);
-      const buffer = audioContext.createBuffer(1, sampleCount, audioContext.sampleRate);
-      const samples = buffer.getChannelData(0);
-      for (let i = 0; i < samples.length; i++) {
-        const grain = Math.random() * 2 - 1;
-        samples[i] = grain * (.38 + Math.random() * .18);
-      }
-      const paper = audioContext.createBiquadFilter();
-      const softener = audioContext.createBiquadFilter();
-      const gain = audioContext.createGain();
-      paper.type = 'bandpass'; paper.frequency.value = 820; paper.Q.value = .55;
-      softener.type = 'lowpass'; softener.frequency.value = 1650; softener.Q.value = .35;
-      gain.gain.value = 0;
-      source.buffer = buffer;
-      source.loop = true;
-      source.connect(paper); paper.connect(softener); softener.connect(gain); gain.connect(audioContext.destination);
-      source.onended = () => { source.disconnect(); paper.disconnect(); softener.disconnect(); gain.disconnect(); };
-      source.start();
-      scratchSource = source;
-      scratchGain = gain;
+    if (!pencilSource) {
+      pencilSource = audioContext.createMediaElementSource(pencilAudio);
+      pencilGain = audioContext.createGain();
+      pencilGain.gain.value = 0;
+      pencilSource.connect(pencilGain); pencilGain.connect(audioContext.destination);
     }
+    window.clearTimeout(pencilPauseTimer);
     const now = audioContext.currentTime;
-    const volume = Math.min(.026, .012 + distance * .0012);
-    scratchGain.gain.cancelScheduledValues(now);
-    scratchGain.gain.setTargetAtTime(volume, now, .012);
-    void audioContext.resume().catch(stopPencil);
-    window.clearTimeout(scratchIdleTimer);
-    scratchIdleTimer = window.setTimeout(stopPencil, 70);
+    pencilGain!.gain.cancelScheduledValues(now);
+    pencilGain!.gain.setTargetAtTime(.8, now, .015);
+    if (audioContext.state === 'suspended') void audioContext.resume().catch(stopPencil);
+    if (!pencilPlaying) {
+      pencilPlaying = true;
+      // Resume the real recording where the last stroke stopped, at its natural pace.
+      void pencilAudio.play().then(() => {
+        if (!pencilPlaying || disposed || effectsMuted) pencilAudio.pause();
+      }).catch(() => { pencilPlaying = false; });
+    }
+    window.clearTimeout(pencilIdleTimer);
+    pencilIdleTimer = window.setTimeout(stopPencil, 100);
   }
 
   function play(kind: CelebrationKind) {
-    if (disposed || document.visibilityState !== 'visible') return;
+    if (disposed || effectsMuted || document.visibilityState !== 'visible') return;
     stopAudio();
     if (kind === 'mistake') {
       playMistake();
@@ -165,6 +156,7 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   }
 
   function requestAudio(kind: CelebrationKind) {
+    if (effectsMuted) return;
     if (pronunciationPlaying) {
       if (kind === 'complete' || pendingAudio !== 'complete') pendingAudio = kind;
       return;
@@ -195,7 +187,7 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   }
 
   function finalVisual() {
-    const portal = root.querySelector<HTMLElement>('.unit-portal');
+    const portal = root.querySelector<HTMLElement>('.unit-portal') ?? root.querySelector<HTMLElement>('.trace-board');
     if (!portal) return;
     portal.classList.add(motion.matches ? 'is-final-highlight' : 'is-final-celebration');
     let confetti: HTMLDivElement | undefined;
@@ -240,6 +232,22 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
     requestAudio('complete');
   }
 
+  function updateSoundButton() {
+    if (!soundButton) return;
+    soundButton.textContent = effectsMuted ? 'Effects: Off' : 'Effects: On';
+    soundButton.setAttribute('aria-pressed', String(!effectsMuted));
+    soundButton.setAttribute('aria-label', effectsMuted ? 'Turn tracing sound effects on' : 'Pause tracing sound effects');
+  }
+  if (soundButton) soundButton.onclick = () => {
+    effectsMuted = !effectsMuted;
+    try { localStorage.setItem('wayword.tracing.effects-muted', String(effectsMuted)); } catch {}
+    if (effectsMuted) { pendingAudio = null; stopAudio(); }
+    updateSoundButton();
+  };
+  updateSoundButton();
+  const onVisibility = () => { if (document.hidden) { pendingAudio = null; stopAudio(); } };
+  document.addEventListener('visibilitychange', onVisibility);
+
   return {
     acceptLetter,
     completeWithKeyboard,
@@ -267,7 +275,13 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
       timers.forEach(timer => window.clearTimeout(timer));
       timers.clear();
       stopAudio();
-      [successAudio, completeAudio].forEach(audio => {
+      window.clearTimeout(pencilIdleTimer);
+      window.clearTimeout(pencilPauseTimer);
+      pencilAudio.pause();
+      if (soundButton) soundButton.onclick = null;
+      document.removeEventListener('visibilitychange', onVisibility);
+      pencilSource?.disconnect(); pencilGain?.disconnect();
+      [successAudio, completeAudio, pencilAudio].forEach(audio => {
         audio.removeAttribute('src');
         audio.load();
       });
