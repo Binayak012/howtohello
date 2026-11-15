@@ -5,9 +5,11 @@ import { writingLessons } from './writing-strokes';
 import { setupWritingGuide } from './writing-guide';
 import { basicPasscode, evaluateTrace, saveBasicUnlock, validPasscode } from '../../src/unit-unlock';
 import { completeLevel, completedLevels, isUnlocked, journey, levelHref, nextLevel } from '../../src/progression';
+import { mountDemoSkip } from '../../src/demo-skip';
 
 /** Chapter 4, Your First Letters: trace five vowels after Counting with Lila, then continue to the shop. */
 export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void {
+  mountDemoSkip(true, 'letters');
   let completed: ReturnType<typeof completedLevels> = [];
   let storageReadable = true;
   try { completed = completedLevels(localStorage); } catch { storageReadable = false; }

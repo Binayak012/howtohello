@@ -1,0 +1,177 @@
+/* The finale's "living words": Nepali first, English only when the learner peeks. */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.live-word{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.1;position:relative}
+.live-word strong{font:700 1em/1.35 var(--font-target);color:var(--ink);transition:color .3s,text-shadow .3s}
+.live-word .latin-guide{font-size:.38em;font-weight:650;color:var(--muted);letter-spacing:.02em}
+.live-word .gloss{font-size:.34em;font-weight:700;color:var(--teal-d);background:#e1efe7;border-radius:99px;padding:1px 7px;margin-top:3px;display:none}
+#market-roam[data-peek=true] .gloss{display:inline-block;animation:gloss-in .25s ease-out}
+@keyframes gloss-in{from{opacity:0;transform:translateY(-3px)}}
+/* Color words are written in plain ink until you pick the right color; then they paint themselves. */
+.live-word[data-kind=color] strong{text-decoration:underline dashed #bdb2a0 2px;text-underline-offset:6px}
+.live-word[data-kind=color][data-met=true] strong{color:var(--paint);text-decoration-color:var(--paint);text-shadow:0 0 14px color-mix(in srgb,var(--paint) 45%,transparent)}
+.live-word[data-kind=color][data-wrong]::after{content:attr(data-wrong) ' ✗';position:absolute;top:-1.3em;left:50%;transform:translateX(-50%);font:700 .55em/1.3 var(--font-target);white-space:nowrap;color:var(--wrong);background:#2f2a33;padding:2px 8px;border-radius:99px;animation:gloss-in .2s ease-out}
+/* Number words glow when the count in your hands matches. */
+.live-word[data-kind=number][data-met=true] strong{color:#2f8a5b;text-shadow:0 0 12px #8fd6aa}
+.dots{display:inline-flex;gap:4px;justify-content:center}
+.dots i{width:9px;height:9px;border-radius:50%;border:2px solid #cdbfa6;background:transparent}
+.dots i.on{background:var(--teal);border-color:var(--teal)}
+
+/* Errand strip: a picture and the key words for each neighbor. */
+#app #market-roam .word-strip{max-width:none;width:auto;padding:10px;border-radius:20px;display:flex;flex-direction:column;gap:8px}
+.errand-chips{display:flex;flex-direction:column;gap:6px}
+.errand-chips button{position:relative;display:flex;align-items:center;gap:9px;padding:6px 14px 6px 6px;border-radius:99px;background:#f2e6d1;text-align:left;min-height:42px;transition:background .2s,box-shadow .2s}
+.errand-chips button[aria-pressed=true]{background:white;box-shadow:0 0 0 3px var(--teal)}
+.errand-chips button[data-optional=true]{background:transparent;border:2px dashed #e0d2b8}
+.errand-chips button[data-done=true]{opacity:.55}
+.chip-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:white;font-size:17px;flex-shrink:0}
+.chip-word{font:700 15px/1.3 var(--font-target)}
+.chip-done{display:none;position:absolute;right:-4px;top:-4px;width:18px;height:18px;border-radius:50%;background:var(--teal);color:white;font:800 10px/18px sans-serif;text-align:center;font-style:normal}
+.errand-chips button[data-done=true] .chip-done{display:block}
+.strip-tools{display:flex;gap:6px}
+.strip-tools button{width:38px;height:38px;border-radius:50%;background:white;font-size:16px;box-shadow:0 2px 0 #e0d2b8}
+.strip-tools .strip-review{font:700 11px/1 var(--font-target);color:var(--teal-d)}
+#market-roam[data-stuck=true] .strip-tools [data-market-action=peek],#market-roam[data-stuck=true] .strip-tools [data-market-action=face-target]{background:var(--marigold);animation:tool-glow 1.2s ease-in-out infinite}
+@keyframes tool-glow{50%{box-shadow:0 0 0 6px #f2b84b55}}
+
+/* The direction word lives on the side of the screen where the goal is. */
+#app #market-roam .market-waypoint{flex-direction:row;align-items:center;gap:10px;padding:10px 16px}
+#market-roam .wp-icon{font-size:26px}
+#market-roam .wp-word{display:flex;flex-direction:column;align-items:center}
+#app #market-roam .market-waypoint strong{font:700 32px/1.3 var(--font-target)}
+#market-roam .wp-word .latin-guide{font-size:11px;color:var(--muted)}
+#market-roam .market-waypoint[data-side=right]{flex-direction:row-reverse}
+#market-roam .wp-word .gloss{font-size:10px}
+
+/* Talk prompt and keys stay tiny; the keys hint disappears once you move. */
+#app #market-roam .market-talk{font-size:15px;padding:10px 20px}
+#app #market-roam .market-talk:disabled{opacity:0;pointer-events:none}
+#market-roam kbd{display:inline-block;padding:1px 7px;border-radius:6px;background:#ffffffcc;border:1px solid #d6c8af;color:var(--ink);font:700 11px/1.5 system-ui,sans-serif}
+#market-roam[data-moved=true] .market-keys{opacity:0;transition:opacity 1s 2s}
+#app #market-roam .market-roam-status{font-size:17px;text-shadow:0 2px 8px #302b25cc}
+.wrong-word{color:var(--paint);font-weight:800;-webkit-text-stroke:.5px #00000030}
+
+/* Speech bubble: the neighbor's words above, your answer as Nepali word buttons below. */
+#app #market-roam .word-bubble{right:7%;top:16%;transform:none;width:min(420px,92%);padding:16px 20px 18px;border-radius:30px 30px 30px 8px;text-align:center}
+#market-roam .word-bubble header{justify-content:space-between}
+.speaker{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--muted)}
+.bubble-close{width:30px;height:30px;border-radius:50%;background:#f2e6d1;font-size:12px;padding:0}
+.bubble-words{font-size:40px;margin:14px 0 6px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;outline:none}
+.bubble-icon{font-size:.85em;line-height:1}
+.coin-icon{display:inline-grid;place-items:center;width:1em;height:1em;border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffedaa,#e3b84e 65%,#bd8b29);font:700 .45em/1 var(--font-target);color:#7d5616}
+.bubble-side{display:inline-flex;align-items:center;gap:6px;font-size:.6em;padding:4px 12px;border-radius:99px;background:var(--lavtint)}
+#market-roam .word-bubble .market-replies{justify-content:center;gap:12px;margin:14px 0 4px}
+.word-reply{font-size:30px;padding:10px 20px;border-radius:22px;background:white;border:2px solid #e3d5bc;box-shadow:0 4px 0 #e3d5bc;display:inline-flex;align-items:center;gap:8px}
+.word-reply:hover,.word-reply:focus-visible{border-color:var(--teal);box-shadow:0 4px 0 var(--teal-d)}
+.word-reply .bubble-icon{font-size:.8em}
+#app #market-roam .bubble-react{font-size:18px;color:var(--ink);margin:4px 0 0;min-height:24px}
+.word-bubble[data-bump=true]{animation:bubble-bump .45s ease-out}
+@keyframes bubble-bump{30%{transform:translateX(-8px) scale(1.03)}60%{transform:translateX(5px)}}
+.count-compare{display:flex;align-items:center;gap:16px}
+.count-compare>span{display:flex;flex-direction:column;align-items:center;gap:6px}
+.count-compare>b{font-size:.8em;color:#b5473a}
+.count-compare>span:last-child strong{color:#b5473a}
+
+/* The tray: what you were asked for, and a live Nepali count of what's in your hands. */
+#app #market-roam .word-tray{width:auto;min-width:230px;padding:14px 16px;border-radius:24px;text-align:center}
+.word-tray header{display:flex;align-items:center;gap:10px}
+.tray-icon{font-size:26px}
+.tray-target{flex:1;display:flex;justify-content:center;gap:14px;font-size:28px}
+.tray-count{display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0;padding:8px 14px;border-radius:16px;background:var(--lavtint);font-size:30px;min-height:58px;transition:background .3s}
+.tray-count[data-met=true]{background:#dff0e4}
+.tray-count .zero{font-size:24px;color:var(--muted)}
+.tray-route{font:700 22px/1.4 var(--font-target);margin:12px 0}
+.word-tray .task-buttons{justify-content:center;gap:10px}
+.swatch-pick{width:50px;height:50px;border-radius:50%;padding:5px;background:white;border:2px solid #e3d5bc;box-shadow:0 3px 0 #e3d5bc}
+.swatch-pick i{display:block;width:100%;height:100%;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1.5px #3d302a33}
+.tray-action{width:50px;height:50px;border-radius:50%;font-size:22px;padding:0;background:var(--teal);color:white;box-shadow:0 3px 0 var(--teal-d)}
+.tray-action.quiet{background:white;color:var(--ink);box-shadow:0 3px 0 #e3d5bc}
+.word-tray button:disabled{opacity:.4}
+.word-pop{position:absolute;left:50%;top:40%;font:700 34px/1 var(--font-target);color:var(--teal-d);pointer-events:none;animation:word-pop .9s ease-out forwards}
+@keyframes word-pop{from{opacity:0;transform:translate(-50%,10px) scale(.8)}20%{opacity:1}to{opacity:0;transform:translate(-50%,-60px) scale(1.15)}}
+#app #market-roam .word-tray .coin-purse{justify-content:center}
+
+@media(max-width:560px){
+  #app #market-roam .word-strip{padding:7px;gap:6px}
+  .errand-chips{flex-direction:row;flex-wrap:wrap}
+  .errand-chips button{padding:4px;min-height:0}
+  .chip-word{display:none}
+  .errand-chips button[aria-pressed=true] .chip-word{display:inline;font-size:12px;padding-right:6px}
+  .strip-tools button{width:32px;height:32px;font-size:14px}
+  #app #market-roam .word-bubble{left:12px;right:12px;top:auto;bottom:18px;width:auto}
+  .bubble-words{font-size:32px}
+  .word-reply{font-size:24px;padding:8px 14px}
+  #app #market-roam .word-tray{min-width:0;width:240px}
+  .tray-target{font-size:22px}
+  .tray-count{font-size:24px}
+  #app #market-roam .market-waypoint strong{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){.word-pop,.word-bubble[data-bump=true],#market-roam[data-stuck=true] .strip-tools button{animation:none}}
+#app #market-roam[data-mode=conversation] :is(.market-waypoint,.market-talk,.market-roam-status,.market-keys,.market-crosshair){display:none}
+#app #market-roam .market-roam-status{bottom:160px;width:auto;max-width:90%;margin:0;padding:0}
+#app #market-roam .market-roam-status:not(:empty){padding:6px 16px;border-radius:99px;background:#fffaf0f2;color:var(--ink);text-shadow:none;box-shadow:0 6px 24px #2b234030}
+.word-pop{top:-46px}
+
+/* Layout: what to do now (top-left), help (bottom-left). */
+#app #market-roam .word-strip{width:300px;padding:14px 16px;gap:10px}
+#app #market-roam .word-strip .eyebrow{font-size:9px;margin:0;color:var(--teal-d)}
+#app #market-roam .market-instruction{font-size:16px;font-weight:700;line-height:1.45;color:var(--ink);margin:0}
+.market-instruction b[lang=ne]{font:700 19px/1.3 var(--font-target);color:var(--teal-d)}
+#app #market-roam .market-instruction kbd{font-size:12px}
+#app #market-roam .errand-chips{flex-direction:row;flex-wrap:wrap;gap:6px}
+#app #market-roam .errand-chips button{padding:4px;min-height:0}
+#app #market-roam .errand-chips button[aria-pressed=true]{padding-right:12px}
+#app #market-roam .errand-chips .chip-word{display:none;font-size:13px}
+#app #market-roam .errand-chips button[aria-pressed=true] .chip-word{display:inline}
+#app #market-roam[data-mode=conversation] .market-journal{opacity:1}
+.market-help{position:absolute;left:25px;bottom:24px;width:320px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none}
+.market-help>*{pointer-events:auto}
+#app #market-roam .market-help .market-hint{position:relative;left:auto;bottom:auto;transform:none;width:100%;padding:12px 38px 12px 14px;border-radius:18px;background:#fff6e2f7;border:1px solid #f2d79b;box-shadow:0 10px 30px #47372b30;animation:gloss-in .3s ease-out}
+.market-help .market-hint p{margin:0;font-size:13px;line-height:1.55;color:var(--ink)}
+.market-help .market-hint b[lang=ne]{font:700 16px/1.3 var(--font-target);color:var(--teal-d)}
+.hint-close{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;padding:0;font-size:11px;background:#f2e6d1}
+.market-help .strip-tools{display:flex;gap:8px}
+.market-help .strip-tools button{height:42px;min-width:42px;border-radius:99px;background:white;font-size:16px;box-shadow:0 3px 0 #e0d2b8}
+.market-help .help-main{padding:0 16px;font:700 14px/1 inherit;display:flex;align-items:center;gap:6px}
+#app #market-roam .market-waypoint[data-side=left]{top:50%;bottom:auto;transform:translateY(-50%)}
+/* Keyboard and mouse players don't need the on-screen arrows. */
+@media(min-width:801px) and (hover:hover) and (pointer:fine){#market-roam .market-touch{display:none}}
+@media(max-width:560px){
+  #app #market-roam .word-strip{width:auto;right:12px;padding:10px 12px}
+  #app #market-roam .market-instruction{font-size:13px}
+  .market-help{left:12px;bottom:150px;width:calc(100% - 24px)}
+  #app #market-roam .market-waypoint,#app #market-roam .market-waypoint[data-side=left],#app #market-roam .market-waypoint[data-side=right]{top:auto;bottom:340px;transform:none}
+  #app #market-roam .market-waypoint[data-side=ahead],#app #market-roam .market-waypoint[data-side=behind]{left:50%;transform:translateX(-50%)}
+}
+#app #market-roam[data-mode=conversation] .market-help .market-hint:not([hidden]){display:block}
+#app #market-roam .market-help .help-main{width:auto}
+#app #market-roam .market-help .market-hint{top:auto}
+
+/* One short task line, and a fading pop-up for right answers and hints. */
+.bubble-task,.tray-task{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
+.tray-task{margin:0 0 8px;max-width:260px;line-height:1.45;text-align:left;color:var(--ink)}
+.word-toast{position:absolute;left:50%;bottom:205px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;width:max-content;max-width:min(480px,calc(100% - 24px));padding:11px 18px;border-radius:18px;font-size:14px;line-height:1.5;color:var(--ink);box-shadow:0 12px 34px #2b234030;pointer-events:none}
+.word-toast[data-kind=right]{background:#e6f5eb;border:2px solid #8fd6aa}
+.word-toast[data-kind=hint]{background:#fff3db;border:2px solid #f2c96b}
+.word-toast b[lang=ne]{font:700 18px/1.3 var(--font-target)}
+.toast-mark{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:white;font-weight:800;color:#2f8a5b}
+.word-toast.is-in{animation:toast-in .35s ease-out}
+@keyframes toast-in{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(max-width:560px){.word-toast{bottom:auto;top:215px;font-size:12px}.word-toast b[lang=ne]{font-size:15px}.tray-task{font-size:11px;max-width:210px}}
+@media(prefers-reduced-motion:reduce){.word-toast.is-in{animation:none}}
+/* Greeting step: the task is the headline, no line to copy. */
+.bubble-ask{font-size:22px;font-weight:800;color:var(--ink);line-height:1.3}
+.word-bubble[data-stage=greet] .bubble-task{display:none}
+
+/* Teddy errand: a picture question and a step checklist. */
+.behind-scene{position:relative;display:inline-block;width:110px;height:80px}
+.hide-teddy{position:absolute;left:34px;top:4px;font-size:44px;filter:saturate(.9)}
+.hide-plant{position:absolute;left:18px;top:14px;font-size:64px}
+.tray-steps{list-style:none;margin:4px 0 10px;padding:0;display:grid;gap:6px;text-align:left}
+.tray-steps li{position:relative;padding:6px 10px 6px 32px;border-radius:12px;font-size:13px;line-height:1.4;color:var(--muted)}
+.tray-steps li::before{content:'';position:absolute;left:9px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;border:2px solid #cdbfa6}
+.tray-steps li[data-state=now]{background:#fff3db;color:var(--ink);font-weight:700}
+.tray-steps li[data-state=now]::before{border-color:var(--marigold);background:var(--marigold)}
+.tray-steps li[data-state=done]{text-decoration:line-through;opacity:.6}
+.tray-steps li[data-state=done]::before{content:'✓';border-color:var(--teal);background:var(--teal);color:white;font:800 9px/14px sans-serif;text-align:center}
+.tray-steps b[lang=ne]{font:700 15px/1.2 var(--font-target);color:var(--teal-d)}
+@media(max-width:560px){.tray-steps li{font-size:11px}}

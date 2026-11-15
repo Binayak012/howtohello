@@ -3,6 +3,10 @@ import { racks, type Item } from './core.ts';
 export type ShelfUnit = { id: string; rackId: string; item: Item; tier: number; column: number; depth: number; taken: boolean };
 export const layouts: Record<Item, { columns: number; depths: number; tiers: number[] }> = {
   fruit: { columns: 7, depths: 3, tiers: [.31, .69, 1.07] },
+  veg: { columns: 6, depths: 3, tiers: [.31, .69, 1.07] },
+  tea: { columns: 7, depths: 2, tiers: [.31, .69, 1.07] },
+  rice: { columns: 3, depths: 2, tiers: [.31, .69, 1.07] },
+  snack: { columns: 5, depths: 2, tiers: [.31, .69, 1.07] },
   bottle: { columns: 6, depths: 2, tiers: [.31, .69, 1.07] },
   book: { columns: 8, depths: 1, tiers: [.31, .69, 1.07] },
   bag: { columns: 3, depths: 2, tiers: [.31, .69, 1.07] },

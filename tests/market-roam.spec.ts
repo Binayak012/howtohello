@@ -30,8 +30,20 @@ async function startTask(page:Page,x:number,z:number,action:string){
   const dialogue=page.locator('.market-dialogue');await expect(dialogue).toBeVisible();
   await expect(page.getByRole('button',{name:'Choose 1',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'Forward',exact:false}).click();
-  await expect(dialogue.locator('[role=status]')).toContainText('Greet your neighbor');
+  // Answering with अगाडि (forward) steps you forward; the reaction shows the word, not an English explanation.
+  await expect(page.locator('.word-toast')).toContainText('means forward');
   await page.getByRole('button',{name:'Hello',exact:false}).click();
+  await expect(page.locator('.word-toast')).toContainText('That’s right!');
+  // The family first asks where the teddy is, with a picture and two words.
+  if(await page.getByRole('button',{name:'Behind',exact:true}).count()){
+    await page.getByRole('button',{name:'In front',exact:true}).click();
+    await expect(page.locator('.word-toast')).toContainText('means in front');
+    await page.getByRole('button',{name:'Behind',exact:true}).click();
+    await expect(page.locator('.word-toast')).toContainText('means behind');
+  }
+  // A wrong answer at the "will you help?" step explains the word instead of moving on.
+  await page.getByRole('button',{name:'Thank you',exact:true}).click();
+  await expect(page.locator('.word-toast')).toContainText('To say OK');
   await page.getByRole('button',{name:action,exact:false}).click();
   await expect(page.locator('#market-roam')).toHaveAttribute('data-mode','roam');
 }
@@ -50,13 +62,22 @@ test('the fruit stall is a real color test: green apples are rejected, red ones 
   await page.goto('/?level=market');
   await expect(page.locator('#market-roam')).toBeVisible();
   await walkTo(page,1.2,10.5);await walkTo(page,11.2,10.5);await walkTo(page,11.2,7.8);await startTask(page,11.2,5.35,'Let me help');
-  await expect(page.locator('.market-task')).toContainText('दुई रातो');
+  await expect(page.locator('.market-task [data-kind=number]')).toContainText('दुई');
+  await expect(page.locator('.market-task [data-kind=color]')).toHaveAttribute('data-met','false');
   await page.screenshot({path:'test-results/market-color-test.png'});
   await page.getByRole('button',{name:'Pick up a green apple',exact:true}).click();
-  await expect(page.locator('.market-roam-status')).toContainText('हरियो');
+  await expect(page.locator('.word-toast')).toContainText('हरियो');
   await expect(page.locator('#picked-total')).toContainText('0 apples');
+  await page.getByRole('button',{name:'Pick up a red apple',exact:true}).click();
+  await expect(page.locator('.word-toast')).toContainText('means red');
+  await page.getByRole('button',{name:'Put one back',exact:true}).click();
   for(let i=0;i<2;i++)await page.getByRole('button',{name:'Pick up a red apple',exact:true}).click();
   await expect(page.locator('#picked-total')).toContainText('2 apples');
+  // The words light up once your hands match them: the color paints itself red, the number glows.
+  await expect(page.locator('.market-task [data-kind=color]')).toHaveAttribute('data-met','true');
+  await expect(page.locator('.market-task [data-kind=number]')).toHaveAttribute('data-met','true');
+  await expect(page.locator('#picked-total')).toContainText('दुई');
+  await expect(page.locator('.word-toast')).toContainText('is two');
   await page.getByRole('button',{name:'Hand over',exact:false}).click();await thankAndLeave(page,'fruit-color');
   expect(errors).toEqual([]);
 });
@@ -94,7 +115,8 @@ test('walk to neighbors, pick real items, pay coins and find the child’s toy',
   await page.getByRole('button',{name:'Keep exploring'}).click();
   await walkTo(page,-3.15,10.5);await walkTo(page,-3.15,20.6);await startTask(page,-2.4,22.65,'Let me help');
   // Aim at the right-hand vase and click its real flower mesh.
-  await face(page,-1.83,21.95);await page.waitForTimeout(350);
+  // Let the drag's own click window (300 ms) and the camera settle before aiming.
+  await face(page,-1.83,21.95);await page.waitForTimeout(900);
   // Project the actual visible flower rather than estimating its screen position
   // from rounded player coordinates and a hard-coded camera height.
   const target=await page.evaluate(async()=>{
@@ -107,14 +129,14 @@ test('walk to neighbors, pick real items, pay coins and find the child’s toy',
   });
   await page.screenshot({path:'test-results/market-flower-target.png'});
   await page.mouse.click(target.x,target.y);
-  await expect(page.locator('.market-roam-status')).toContainText('on your right');
-  await page.getByRole('button',{name:'Pick up a white flower',exact:true}).click();await expect(page.locator('.market-roam-status')).toContainText('सेतो');
+  await expect(page.locator('.word-toast')).toContainText('on your right');
+  await page.getByRole('button',{name:'Pick up a white flower',exact:true}).click();await expect(page.locator('.word-toast')).toContainText('सेतो');
   for(let i=0;i<4;i++)await page.getByRole('button',{name:'Pick up a yellow flower',exact:true}).click();
   await expect(page.locator('#picked-total')).toContainText('4 flowers');
   await page.getByRole('button',{name:'Hand over',exact:false}).click();await thankAndLeave(page,'flowers');
   await walkTo(page,11.2,10.5);await walkTo(page,11.2,7.8);await startTask(page,11.2,5.35,'Let me help');
   await expect(page.locator('.market-task')).toContainText('रातो');
-  await page.getByRole('button',{name:'Pick up a green apple',exact:true}).click();await expect(page.locator('.market-roam-status')).toContainText('हरियो');await expect(page.locator('#picked-total')).toContainText('0 apples');
+  await page.getByRole('button',{name:'Pick up a green apple',exact:true}).click();await expect(page.locator('.word-toast')).toContainText('हरियो');await expect(page.locator('#picked-total')).toContainText('0 apples');
   for(let i=0;i<3;i++)await page.getByRole('button',{name:'Pick up a red apple',exact:true}).click();
   await page.getByRole('button',{name:'Hand over',exact:false}).click();
   await expect(page.locator('.market-dialogue')).toContainText('You brought 3');
