@@ -9,6 +9,8 @@ function gameDirectoryIndex(req: { url?: string }, _res: unknown, next: () => vo
 }
 
 export default defineConfig({
+  // Read VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY from the project root's .env.local.
+  envDir: '..',
   server: { fs: { allow: ['..'] } },
   plugins: [{
     name: 'game-directory-index',

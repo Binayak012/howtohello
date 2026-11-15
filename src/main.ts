@@ -1,8 +1,11 @@
 import { completedLevels, isUnlocked, journey, type JourneyLevel } from './progression';
 import { mountDemoSkip } from './demo-skip';
+import { startCloudSync } from './cloud';
 import './tokens.css';
 import { canAccessLesson } from './tracing-progress';
 
+// Bring this learner's saved progress into the browser first (only when signed in to an account).
+await startCloudSync();
 const requested = new URLSearchParams(location.search).get('level');
 const website = import.meta.env.BASE_URL === '/game/';
 let completed:ReturnType<typeof completedLevels>=[];
