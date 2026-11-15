@@ -1,4 +1,5 @@
 import { completedLevels, isUnlocked, journey, type JourneyLevel } from './progression';
+import { mountDemoSkip } from './demo-skip';
 import './tokens.css';
 
 const requested = new URLSearchParams(location.search).get('level');
@@ -6,6 +7,7 @@ const website = import.meta.env.BASE_URL === '/game/';
 let completed:ReturnType<typeof completedLevels>=[];
 try{completed=completedLevels(localStorage);}catch{/* The first level works without storage. */}
 const level = journey.find(item => item.route === requested) as JourneyLevel | undefined;
+mountDemoSkip(website, level?.id ?? 'moving-in');
 
 if(!level||level.id==='moving-in'){
   const {startMovingIn}=await import('./moving-in');startMovingIn();

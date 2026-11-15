@@ -1,0 +1,150 @@
+/* Direction card: it moves to the side of the screen the item is on, and its arrow points at it. */
+#app .cue{top:44%;bottom:auto;left:50%;right:auto;transform:translate(-50%,-50%);flex-direction:column;gap:4px;min-width:0;padding:12px 20px 14px;border-radius:26px;animation:none;transition:box-shadow .2s}
+#app .cue[data-side=left]{left:3.5%;transform:translateY(-50%)}
+#app .cue[data-side=right]{left:auto;right:3.5%;transform:translateY(-50%)}
+#app .cue[data-side=ahead]{top:170px;transform:translateX(-50%)}
+#app .cue[data-side=behind]{top:auto;bottom:178px;transform:translateX(-50%)}
+#app .cue[data-ready=true]{box-shadow:inset 0 2px 0 white,0 0 0 4px #f2b84b,0 20px 45px #2b234026}
+.cue-item{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-d);white-space:nowrap}
+.cue-body{display:flex;align-items:center;gap:14px}
+.cue[data-side=right] .cue-body{flex-direction:row-reverse}
+.cue-arrow{display:grid;place-items:center;width:52px;height:52px;flex-shrink:0;border-radius:50%;background:var(--teal);color:white;font-size:30px;font-weight:700;box-shadow:inset 0 2px 0 #ffffff40,0 3px 0 var(--teal-d)}
+.cue-arrow i{display:block;font-style:normal;line-height:1;transform:rotate(var(--turn,0deg));transition:transform .35s ease;animation:cue-nudge 1.4s ease-in-out infinite}
+.cue[data-arrow=false] .cue-arrow{display:none}
+@keyframes cue-nudge{50%{transform:rotate(var(--turn,0deg)) translateY(-5px)}}
+#app .cue .target{font-size:40px;line-height:1.35;white-space:nowrap}
+#app .cue p{position:static;margin:4px 0 0;padding:6px 12px;max-width:250px;white-space:normal;text-align:center;font-size:11px;line-height:1.45;box-shadow:none;background:var(--lavtint)}
+
+/* Controls carry the Nepali word, so pressing a button rehearses it. */
+#app .controls button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1}
+#app .controls .turn-control{width:70px;height:72px}
+.ctl-arrow{font-size:22px;line-height:1}
+.controls b[lang=ne]{font:700 14px/1.3 var(--font-target)}
+#app .step-controls button{flex-direction:row;gap:6px;width:92px;height:34px;font-size:17px}
+#app .step-controls b[lang=ne]{font-size:13px}
+#app .controls small{font-size:7px;margin:0}
+#app .controls button.is-suggested{background:var(--marigold);outline:3px solid #fff3c9;outline-offset:1px;box-shadow:0 4px 0 #c99a33;animation:control-pulse 1s ease-in-out infinite}
+#app #interact.is-ready{outline:4px solid #f2b84b;outline-offset:2px;animation:control-pulse 1.1s ease-in-out infinite}
+@keyframes control-pulse{50%{outline-color:#f2b84b00}}
+.hint-button{display:flex;align-items:center;gap:7px;padding:8px 14px 8px 8px;border-radius:99px;background:var(--card);font-size:12px;font-weight:700;box-shadow:var(--shadow-chip)}
+.hint-button span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--marigold);font-size:14px}
+.order-item.current{background:var(--teal);color:white}
+
+/* Lesson: step indicator, tried words, and the quick check. */
+.lesson-steps{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.lesson-steps span{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.lesson-steps .is-current{background:var(--teal);color:white}
+.lesson-steps .is-done{background:#e1efe7;color:var(--teal-d)}
+.direction-card.is-tried .card-selected{opacity:1;scale:1}
+.word-lesson .word-detail .word-explanation strong{font:700 16px/1.3 var(--font-target);color:var(--ink)}
+.word-lesson .word-detail .word-explanation b{color:var(--ink)}
+.quiz-word{display:flex;flex-direction:column;align-items:center;margin:10px 0 0}
+.quiz-word strong{font:700 46px/1.35 var(--font-target)}
+.quiz-word .latin-guide{font-size:15px;font-weight:650;color:var(--muted)}
+.word-lesson .quiz-map{grid-template-rows:repeat(3,70px);max-width:300px;margin:8px auto}
+.quiz-card{align-items:center}
+#app .quiz-card .quiz-arrow{font-size:40px;line-height:1;font-weight:700;color:var(--accent)}
+.quiz-card.is-right{border-color:var(--teal);background:#e1efe7}
+.quiz-score{display:flex;justify-content:center;gap:6px;margin:4px 0}
+.quiz-score i{width:10px;height:10px;border-radius:50%;background:var(--sunk)}
+.quiz-score i.current{background:var(--marigold)}
+.quiz-score i.done{background:var(--teal)}
+.quiz-feedback{min-height:22px;font-size:12px;color:var(--muted);margin:6px 0 10px}
+.quiz-feedback[data-state=right]{color:var(--teal-d);font-weight:700}
+.quiz-feedback[data-state=miss]{color:#9a4a32}
+.quiz-feedback strong{font-family:var(--font-target);font-size:15px}
+.word-lesson[data-step=passed] .lesson-cta{outline:3px solid #f2b84b;outline-offset:3px;animation:control-pulse 1.2s ease-in-out 2}
+
+/* Shop → market hand-off. */
+.next-chapter{display:flex;flex-direction:column;gap:3px;max-width:420px;margin:14px auto;padding:12px 16px;border-radius:18px;background:#fff1d6;text-align:left}
+.next-chapter strong{font:400 22px/1.2 Georgia,serif}
+.next-chapter small{font-size:11px;line-height:1.5;color:var(--muted)}
+#app .market-caption{animation:none;opacity:0}
+#app .market-caption.is-showing{animation:caption-in .9s ease-out both}
+@keyframes caption-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.finale-how{font-size:11px!important;color:var(--muted)}
+.finale-how kbd,.market-hint kbd{display:inline-block;padding:1px 6px;border-radius:5px;background:white;border:1px solid #d6c8af;font:700 10px/1.4 inherit}
+.market-arrival ol.finale-topics small b{color:var(--ink)}
+
+@media(max-width:800px){
+  #app .cue[data-side=left],#app .cue[data-side=right]{top:40%}
+  #app .cue .target{font-size:32px}
+  .cue-arrow{width:42px;height:42px;font-size:24px}
+}
+@media(max-width:560px){
+  #app .cue{top:auto;bottom:268px;padding:8px 13px 10px;border-radius:20px}
+  #app .cue[data-side=left]{left:12px;top:auto}
+  #app .cue[data-side=right]{right:12px;top:auto}
+  #app .cue[data-side=ahead],#app .cue[data-side=behind]{top:auto;bottom:268px}
+  #app .cue .target{font-size:26px}
+  #app .cue p{max-width:190px;font-size:10px}
+  .cue-arrow{width:36px;height:36px;font-size:20px}
+  .cue-body{gap:9px}
+  #app .controls .turn-control{width:56px;height:68px}
+  #app .step-controls button{width:84px;height:32px}
+  .hint-button{padding:6px 10px 6px 6px;font-size:11px}
+  .quiz-word strong{font-size:38px}
+  .word-lesson .quiz-map{grid-template-rows:repeat(3,62px)}
+}
+@media(max-height:580px) and (min-width:561px){
+  #app .cue[data-side=ahead]{top:120px}
+  #app .cue[data-side=behind]{bottom:120px}
+}
+@media(prefers-reduced-motion:reduce){
+  .cue-arrow i,#app .controls button.is-suggested,#app #interact.is-ready,#app .market-caption.is-showing{animation:none}
+  #app .market-caption{opacity:1}
+}
+
+/* Market: the same arrow card, placed on the side the neighbor is on. */
+#app .market-waypoint{top:40%;left:50%;right:auto;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:10px 18px 12px;text-align:left}
+#app .market-waypoint[data-side=left]{left:25px;top:auto;bottom:180px;transform:none}
+#app .market-waypoint[data-side=right]{left:auto;right:25px;transform:translateY(-50%)}
+#app .market-waypoint[data-side=ahead]{top:95px;transform:translateX(-50%)}
+#app .market-waypoint[data-side=behind]{top:95px;transform:translateX(-50%)}
+#app .market-waypoint .wp-name{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--teal-d);white-space:nowrap}
+.wp-body{display:flex;align-items:center;gap:12px}
+.market-waypoint[data-side=right] .wp-body{flex-direction:row-reverse}
+.wp-word{display:flex;flex-direction:column}
+#app .market-waypoint strong{font:700 30px/1.35 var(--font-target);white-space:nowrap}
+#app .market-waypoint small{font-size:10px;color:var(--muted)}
+#app .market-waypoint .cue-arrow{width:44px;height:44px;font-size:24px}
+.market-destinations button[aria-pressed=true]{background:var(--teal);color:white}
+.market-destinations button[aria-pressed=true] small{color:#e4f1ec}
+.market-journal-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.market-hint-button{display:flex;align-items:center;gap:6px;font-size:11px!important;padding:6px 11px 6px 6px!important}
+.market-hint-button span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--marigold);font-size:12px}
+#app .market-hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);width:min(400px,calc(100% - 24px));pointer-events:auto;padding:13px 15px;border-radius:18px;background:#fff6e2f7;border:1px solid #f2d79b;box-shadow:0 12px 40px #47372b30;animation:caption-in .4s ease-out}
+.market-hint>div{display:flex;gap:8px;justify-content:space-between}
+.market-exploration[data-mode=conversation] .market-hint{display:none}
+.market-hint p{font-size:12px;line-height:1.6;color:var(--ink);margin:0 0 9px}
+.market-hint .eyebrow{display:block;font-size:8px;margin-bottom:3px;color:#9a6b12}
+.market-hint strong[lang=ne]{font:700 14px/1.3 var(--font-target)}
+.market-hint .quiet{font-size:10px;padding:6px 10px}
+@media(max-width:560px){
+  #app .market-waypoint{top:auto;bottom:250px;padding:7px 11px 9px;max-width:calc(100% - 24px);min-width:0}
+  #app .market-waypoint[data-side=left]{left:12px;top:auto}
+  #app .market-waypoint[data-side=right]{right:12px;top:auto}
+  #app .market-waypoint[data-side=ahead],#app .market-waypoint[data-side=behind]{top:auto;bottom:250px}
+  #app .market-waypoint strong{font-size:22px}
+  #app .market-waypoint .cue-arrow{width:34px;height:34px;font-size:18px}
+  #app .market-hint{bottom:auto;top:200px}
+  .market-hint p{font-size:11px}
+}
+#app .market-destinations{gap:5px}
+#app .market-destinations button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:8px 10px}
+#app .market-destinations button b{font-size:11px}
+#app .market-destinations button span[lang=ne]{font:700 13px/1.3 var(--font-target)}
+#app .market-destinations button small{font-size:9px;text-align:right}
+#market-title:focus{outline:none}
+/* Keep the chapter-complete card on one screen. */
+#app .results .recap-words{grid-template-columns:repeat(4,1fr);max-width:560px;gap:8px;margin:12px auto}
+#app .results .recap-words>div{padding:8px 6px}
+#app .results .recap-words strong{font-size:24px;line-height:1.5}
+#app .results .recap-words span{font-size:10px}
+#app .results h2{font-size:30px;margin:4px}
+@media(max-width:560px){#app .results .recap-words{grid-template-columns:1fr 1fr}}
+#app .results .completion-celebration{zoom:.72}
+.finale-pictures li{flex-direction:row!important;align-items:center;gap:10px!important;padding:10px 12px!important}
+.finale-pictures li>span[aria-hidden]{font-size:24px}
+.finale-pictures strong{font-size:19px!important}
+.market-arrival .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

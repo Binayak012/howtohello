@@ -6,7 +6,7 @@ export const marketActivities = [
   { id:'fruit', name:'Fruit stall', person:'Maya · fruit seller', x:11.2, z:5.35, count:2, item:'apples', hint:'Along this footpath, past the family', request:'I’m packing your picnic. The note asks for रातो apples. How many?', done:'Two red apples for your picnic. All packed!', color:'#d67a53', required:true },
   { id:'bread', name:'Bakery', person:'Arun · baker', x:-9.2, z:5.35, count:3, item:'coins', hint:'Back along the same footpath', request:'A warm loaf costs तीन rupees. Put that many one-rupee coins on the counter.', done:'Three rupees, exactly. Here’s your warm loaf!', color:'#ceab60', required:true },
   { id:'flowers', name:'Flower stall', person:'Tara · flower seller', x:-2.4, z:22.65, count:4, item:'flowers', hint:'Across the street, near the crossing', request:'Make a bouquet with चार पहेँलो flowers. Take them from the vase on your left — बायाँ.', done:'Four yellow flowers from the left vase. A lovely bouquet!', color:'#ad7896', required:true },
-  { id:'family', name:'Find the lost toy', person:'A neighbor and their child', x:5.2, z:7.55, count:1, item:'toy', hint:'A few steps ahead on this footpath', request:'Our little one lost a रातो teddy. Face the shop, turn right toward the bakery, then look behind the planter past it.', done:'You found the teddy! Look at that smile.', color:'#748e9c', required:false },
+  { id:'family', name:'Find the lost toy', person:'A neighbor and their child', x:5.2, z:7.55, count:1, item:'toy', hint:'A few steps ahead on this footpath', request:'Our little one lost a रातो teddy. Walk to the bakery, then look behind the planter past it.', done:'You found the teddy! Look at that smile.', color:'#748e9c', required:false },
 ] as const;
 /** Color tests in the finale: the asked-for color and the distractor next to it. */
 export const pickColors = {
@@ -14,6 +14,9 @@ export const pickColors = {
   flowers: { word:'पहेँलो', roman:'pahelo', english:'yellow', hex:'#e9b52f', otherEnglish:'white', other:'#f6f3ec' },
 } as const;
 export type MarketActivity = typeof marketActivities[number];
+/** The key Nepali words for each errand, shown in the journal. */
+export const errandWords = { fruit:'दुई रातो', bread:'तीन', flowers:'चार पहेँलो', family:'रातो teddy' } as const;
+export const errandNames = { fruit:'Maya', bread:'Arun', flowers:'Tara', family:'Lost teddy' } as const;
 export type ActivityId = MarketActivity['id'];
 export const learnedNumbersKey = 'wayword.numbers.ne.v1';
 export const marketVisitsKey = 'wayword.market-visits.ne.v1';

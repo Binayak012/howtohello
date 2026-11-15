@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { atCheckout, atShopDoor, baseBeats, blocked, facedRack, outside, racks, reviewBeat, routeTo, start, step, turn } from '../src/core.ts';
+import { atCheckout, atShopDoor, baseBeats, blocked, facedRack, outside, rackFor, racks, relativeTo, reviewBeat, routeTo, start, step, turn } from '../src/core.ts';
 import { createStock, layouts, takeOne } from '../src/stock.ts';
 
 test('movement respects the floor plan and two-tile reach', () => {
@@ -16,7 +16,7 @@ test('movement respects the floor plan and two-tile reach', () => {
 
 test('taking removes exactly one individual unit, and reset restores the stock', () => {
   const stock = createStock();
-  const rackId = 'rack_6_6';
+  const rackId = 'rack_2_3';
   const initial = stock.filter(unit => unit.rackId === rackId).length;
   assert.equal(initial, layouts.fruit.columns * layouts.fruit.depths * layouts.fruit.tiers.length);
   const first = takeOne(stock, rackId)!;
@@ -38,7 +38,7 @@ test('taking removes exactly one individual unit, and reset restores the stock',
 test('all shopping tasks and a review remain reachable', () => {
   let player = start();
   const review = reviewBeat([{ item: 'fruit', misses: 3, helped: true }, { item: 'bag', misses: 0, helped: false }]);
-  assert.equal(review.expect, 'take:rack_6_6');
+  assert.equal(review.expect, 'take:rack_2_3');
   for (const beat of [...baseBeats, review]) {
     const route = routeTo(player, beat.expect);
     assert.ok(route, `unreachable: ${beat.expect}`);
@@ -51,6 +51,20 @@ test('all shopping tasks and a review remain reachable', () => {
     assert.ok(beat.expect === `face:${player.facing}` || beat.expect === `take:${facedRack(player)?.id}`);
   }
   assert.equal(racks.length, 8);
+  // Every shelf sells something different, so a direction always names one product.
+  assert.equal(new Set(racks.map(rack => rack.item)).size, 8);
+});
+
+test('direction words describe where a shelf is from where you stand and face', () => {
+  const bag = rackFor(baseBeats[0]);
+  assert.deepEqual(relativeTo(start(), bag.col, bag.row).ways, ['left']);
+  assert.deepEqual(relativeTo(turn(start(), -1), bag.col, bag.row).ways, ['forward']);
+  assert.deepEqual(relativeTo(turn(start(), 1), bag.col, bag.row).ways, ['backward']);
+  assert.deepEqual(relativeTo(turn(turn(start(), 1), 1), bag.col, bag.row).ways, ['right']);
+  // Far shelves are diagonal: ahead and to one side.
+  assert.deepEqual(relativeTo(start(), 6, 3).ways, ['forward', 'right']);
+  assert.deepEqual(relativeTo({ col: 4, row: 3, facing: 'N' }, 6, 7).ways, ['backward', 'right']);
+  assert.ok(relativeTo(start(), 6, 7).angle > 0 && relativeTo(start(), 2, 7).angle < 0);
 });
 
 test('backward movement preserves facing, and the exit stays locked until checkout', () => {

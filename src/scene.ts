@@ -72,6 +72,9 @@ export class ShopScene {
   carriedGoods=new THREE.Group();
   keeperGreetingAt=-10000;
   carryVisibleAt=0;
+  /** A floating gold marker over whatever the player is looking for. */
+  beacon=new THREE.Group();
+  beaconBase=new THREE.Vector3();
   checkout?: { items: THREE.Group[]; from: THREE.Vector3; at: number; last: number; onScan: (count: number) => void; onReady: () => void };
   raf = 0;
   observer: ResizeObserver;
@@ -109,6 +112,7 @@ export class ShopScene {
     this.makeThresholdLight();
     for (const rack of racks) this.makeRack(rack);
     this.makeKeeper();
+    this.makeBeacon();
     this.scene.add(this.camera);
     this.camera.add(this.hand); this.hand.visible = false;
     this.camera.add(this.carriedGoods);this.carriedGoods.position.set(-.34,-.47,-.85);
@@ -295,11 +299,27 @@ export class ShopScene {
 
   }
 
-  label(title: string, subtitle: string, width: number, height: number) {
+  makeBeacon() {
+    const beacon = this.beacon; beacon.name = 'target-beacon'; beacon.visible = false; this.scene.add(beacon);
+    const gold = new THREE.MeshBasicMaterial({ color: '#f2b84b' });
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(.11, 0), gold); gem.scale.set(1, 1.5, 1); beacon.add(gem);
+    const point = new THREE.Mesh(new THREE.ConeGeometry(.07, .16, 4), gold); point.rotation.x = Math.PI; point.position.y = -.27; beacon.add(point);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.2, .012, 6, 28), new THREE.MeshBasicMaterial({ color: '#fff3c9', transparent: true, opacity: .8 }));
+    ring.rotation.x = Math.PI / 2; beacon.add(ring);
+    // The marker is a guide, never something to click.
+    beacon.traverse(object => { object.raycast = () => {}; });
+  }
+  /** Show the marker above a point in the world, or hide it. */
+  setBeacon(at?: { x: number; y: number; z: number }, scale = 1) {
+    this.beacon.visible = !!at;
+    if (at) { this.beaconBase.set(at.x, at.y, at.z); this.beacon.position.copy(this.beaconBase); this.beacon.scale.setScalar(scale); }
+  }
+
+  label(title: string, subtitle: string, width: number, height: number, accent: string = c.teal) {
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = c.card; ctx.beginPath(); ctx.roundRect(0, 0, width, height, 40); ctx.fill();
-    ctx.textAlign = 'center'; ctx.fillStyle = c.teal;
+    ctx.textAlign = 'center'; ctx.fillStyle = accent;
     ctx.font = `700 ${width * .057}px sans-serif`; ctx.fillText(title, width / 2, height * .47);
     ctx.font = `400 ${width * .026}px sans-serif`; ctx.fillStyle = c.muted; ctx.fillText(subtitle, width / 2, height * .74);
     const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; return texture;
@@ -321,7 +341,7 @@ export class ShopScene {
     const group = new THREE.Group(); group.position.set(rack.col - 4, 0, rack.row - 4);
     group.rotation.y = rack.col === 2 ? Math.PI / 2 : -Math.PI / 2;
     group.userData.rackId = rack.id; this.scene.add(group); this.rackGroups.set(rack.id, group);
-    const produce = rack.item === 'fruit';
+    const produce = rack.item === 'fruit' || rack.item === 'veg';
     box(group, [.86, 1.48, .045], [0, .78, -.255], produce ? '#B89A70' : '#D4D9CA', .008);
     box(group, [.86, .2, .58], [0, .1, .02], '#7E9987', .012);
     for (const x of [-.425, .425]) {
@@ -346,8 +366,13 @@ export class ShopScene {
       product.userData.item = unit.item;
       product.name = unit.id; items.add(product); this.units.set(unit.id, product);
     }
-    const names = { fruit: ['FRESH FRUIT', '30 / each'], bottle: ['WATER & DRINKS', '25 / bottle'], bag: ['REUSABLE BAGS', '50 / bag'], book: ['BOOKS & STATIONERY', '120 / book'] };
-    const header = new THREE.Mesh(new THREE.PlaneGeometry(.86, .18), new THREE.MeshBasicMaterial({ map: this.label(...names[rack.item] as [string, string], 768, 180), transparent: true }));
+    const names: Record<Rack['item'], [string, string, string]> = {
+      fruit: ['FRESH FRUIT', '30 / each', '#b5473a'], veg: ['VEGETABLES', '20 / each', '#4f8a4a'],
+      tea: ['TEA & SPICES', '80 / box', '#8a5a2b'], bag: ['REUSABLE BAGS', '50 / bag', '#6f7960'],
+      bottle: ['WATER & DRINKS', '25 / bottle', '#2f7a8a'], rice: ['RICE & LENTILS', '150 / kg', '#a07a3a'],
+      snack: ['BISCUITS & SWEETS', '40 / pack', '#3b6ea8'], book: ['NOTEBOOKS & PENS', '120 / book', '#7a5a8e'],
+    };
+    const header = new THREE.Mesh(new THREE.PlaneGeometry(.86, .18), new THREE.MeshBasicMaterial({ map: this.label(names[rack.item][0], names[rack.item][1], 768, 180, names[rack.item][2]), transparent: true }));
     header.position.set(0, 1.57, .01); group.add(header);
     for (const y of [.28, .66, 1.04]) {
       const tag = new THREE.Mesh(new THREE.PlaneGeometry(.23, .052), new THREE.MeshBasicMaterial({ map: this.label(names[rack.item][1], 'per item', 384, 100), transparent: true }));
@@ -371,6 +396,33 @@ export class ShopScene {
       ball(product, [0, .055, 0], [.047, .05, .047], color);
       cylinder(product, [0, .109, 0], .003, .004, .022, '#795A3B');
       const leaf = ball(product, [.014, .111, 0], [.019, .004, .008], '#5C8557'); leaf.rotation.z = .4;
+    } else if (unit.item === 'veg') {
+      // Carrots, cabbages and onions, so the crate reads as vegetables at a glance.
+      if (unit.column < 2) {
+        for (const z of [-.03, .03]) { const carrot = cylinder(product, [0, .03, z], .022, .004, .15, '#E07B39'); carrot.rotation.x = Math.PI / 2; carrot.rotation.z = .3; }
+        ball(product, [-.03, .03, -.075], [.02, .012, .03], '#5C8557');
+      } else if (unit.column < 4) {
+        ball(product, [0, .055, 0], [.058, .052, .058], '#8DB862');
+        ball(product, [0, .06, 0], [.045, .05, .05], '#B5D38A');
+      } else {
+        ball(product, [0, .045, 0], [.04, .042, .04], '#B0646B');
+        cylinder(product, [0, .095, 0], .002, .008, .03, '#C99A6B');
+      }
+    } else if (unit.item === 'tea') {
+      const color = ['#B5473A', '#3F7D5C', '#C9A13B'][unit.column % 3];
+      box(product, [.085, .13, .06], [0, .065, 0], color, .006);
+      box(product, [.087, .035, .062], [0, .075, 0], '#F3E9D2', .003);
+      ball(product, [0, .075, .032], [.012, .012, .002], color);
+    } else if (unit.item === 'rice') {
+      const band = ['#B5473A', '#4F8A4A', '#C9A13B'][unit.column % 3];
+      ball(product, [0, .1, 0], [.1, .11, .075], '#E8DCC0');
+      box(product, [.16, .05, .005], [0, .1, .074], band, .002);
+      cylinder(product, [0, .215, 0], .012, .03, .04, '#D8C9A6');
+    } else if (unit.item === 'snack') {
+      const color = ['#3B6EA8', '#E2B23A', '#C8553D', '#6A9B5B', '#8E6AA8'][unit.column % 5];
+      box(product, [.11, .16, .035], [0, .08, 0], color, .008);
+      ball(product, [0, .085, .019], [.032, .032, .003], '#F6EBD0');
+      box(product, [.11, .02, .037], [0, .15, 0], '#F6EBD0', .004);
     } else if (unit.item === 'bottle') {
       const color = ['#A5C2BA', '#A5C2BA', '#C4B19A'][unit.column % 3];
       cylinder(product, [0, .075, 0], .037, .037, .15, color);
@@ -637,6 +689,10 @@ export class ShopScene {
       this.camera.rotation.set(0, this.yaw, 0, 'YXZ');
     }
     this.animateCheckout(now);
+    if (this.beacon.visible) {
+      this.beacon.position.y = this.beaconBase.y + (this.reducedMotion ? 0 : Math.sin(now / 320) * .06);
+      this.beacon.rotation.y = this.reducedMotion ? 0 : now / 900;
+    }
     const greeting=(now-this.keeperGreetingAt)/1800;
     if(greeting>=0&&greeting<1&&!this.checkout){const amount=this.reducedMotion?.8:Math.sin(greeting*Math.PI);this.keeperArms.forEach((arm,i)=>arm.rotation.set(-.95*amount,0,(i?-.4:.4)*amount));}
     if(this.arrived && this.roamPose) {

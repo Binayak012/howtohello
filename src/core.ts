@@ -1,13 +1,15 @@
 export type Facing = 'N' | 'E' | 'S' | 'W';
 export type Player = { col: number; row: number; facing: Facing };
-export type Item = 'fruit' | 'book' | 'bottle' | 'bag';
+export type Item = 'fruit' | 'veg' | 'tea' | 'bag' | 'bottle' | 'rice' | 'snack' | 'book';
 export type Rack = { id: string; col: number; row: number; item: Item };
 export const DIRECTIONS: Facing[] = ['N', 'E', 'S', 'W'];
 export const DELTA: Record<Facing, [number, number]> = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 export const start = (): Player => ({ col: 4, row: 7, facing: 'N' });
+// Eight different shelves, so a direction word always points to exactly one product.
+// Left and right are as you walk in: the left wall is col 2, the right wall col 6.
 export const racks: Rack[] = [
-  [2, 3, 'fruit'], [2, 4, 'book'], [2, 6, 'bottle'], [2, 7, 'bag'],
-  [6, 6, 'fruit'], [6, 4, 'book'], [6, 3, 'bottle'], [6, 7, 'bag'],
+  [2, 3, 'fruit'], [2, 4, 'veg'], [2, 6, 'tea'], [2, 7, 'bag'],
+  [6, 3, 'bottle'], [6, 4, 'rice'], [6, 6, 'snack'], [6, 7, 'book'],
 ].map(([col, row, item]) => ({ id: `rack_${col}_${row}`, col: Number(col), row: Number(row), item: item as Item }));
 
 export function blocked(col: number, row: number): boolean {
@@ -41,13 +43,34 @@ export function facedRack(player: Player): Rack | undefined {
   }
 }
 
-export type Beat = { cue: string; expect: string };
+export type Beat = { item: Item; expect: string };
 export const baseBeats: Beat[] = [
-  { cue: 'take.left.bag', expect: 'take:rack_2_7' },
-  { cue: 'take.right.fruit', expect: 'take:rack_6_6' },
-  { cue: 'take.left.fruit', expect: 'take:rack_2_3' },
-  { cue: 'take.right.bottle', expect: 'take:rack_6_3' },
+  { item: 'bag', expect: 'take:rack_2_7' },
+  { item: 'snack', expect: 'take:rack_6_6' },
+  { item: 'fruit', expect: 'take:rack_2_3' },
+  { item: 'bottle', expect: 'take:rack_6_3' },
 ];
+export const rackFor = (beat: Beat) => racks.find(rack => `take:${rack.id}` === beat.expect)!;
+
+export type Way = 'forward' | 'left' | 'right' | 'backward';
+/**
+ * Where a tile is from the player's point of view.
+ * `angle` is in radians, 0 straight ahead and positive to the right.
+ * `ways` is one word, or two for a diagonal ("ahead, on the left").
+ */
+export function relativeTo(player: Player, col: number, row: number): { angle: number; ways: Way[] } {
+  const [fx, fz] = DELTA[player.facing];
+  const [rx, rz] = DELTA[DIRECTIONS[(DIRECTIONS.indexOf(player.facing) + 1) % 4]];
+  const dx = col - player.col, dz = row - player.row;
+  const angle = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
+  const degrees = Math.abs(angle) * 180 / Math.PI, side: Way = angle > 0 ? 'right' : 'left';
+  if (dx === 0 && dz === 0) return { angle: 0, ways: ['forward'] };
+  if (degrees <= 22.5) return { angle, ways: ['forward'] };
+  if (degrees >= 157.5) return { angle, ways: ['backward'] };
+  if (degrees < 67.5) return { angle, ways: ['forward', side] };
+  if (degrees > 112.5) return { angle, ways: ['backward', side] };
+  return { angle, ways: [side] };
+}
 
 // Exhaustively validate reachability using the very same rules as play.
 export function routeTo(player: Player, expect: string): string[] | null {
@@ -76,7 +99,6 @@ export function routeTo(player: Player, expect: string): string[] | null {
 export function reviewBeat(history: { item: Item; misses: number; helped: boolean }[]): Beat {
   const weakest = [...history].sort((a, b) => (b.misses * 2 + Number(b.helped)) - (a.misses * 2 + Number(a.helped)))[0];
   const item = weakest?.item ?? 'bag';
-  // Pick a fresh rack so reviewing an item always remains possible.
-  const rack = racks.find(r => r.item === item && r.col === 6)!;
-  return { cue: `review.${item}`, expect: `take:${rack.id}` };
+  const rack = racks.find(r => r.item === item)!;
+  return { item, expect: `take:${rack.id}` };
 }

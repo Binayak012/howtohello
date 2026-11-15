@@ -2,6 +2,22 @@ import { test, expect, type Page } from '@playwright/test';
 import { baseBeats, routeTo, start, step, turn, type Player } from '../src/core';
 
 const keys: Record<string, string> = { left:'ArrowLeft', right:'ArrowRight', forward:'ArrowUp', backward:'ArrowDown', take:'Space' };
+/** Step 2 of the lesson: a wrong answer is explained and the word comes back; then all four are answered. */
+async function passQuiz(page: Page) {
+  await page.locator('#lesson-next').click();
+  await expect(page.getByRole('heading', { name:'Which way?' })).toBeVisible();
+  const opposite: Record<string, string> = { left:'right', right:'left', forward:'backward', backward:'forward' };
+  const first = (await page.locator('#quiz-word').getAttribute('data-expect'))!;
+  await page.locator(`[data-answer="${opposite[first]}"]`).click();
+  await expect(page.locator('#quiz-feedback')).toContainText('That way is');
+  await expect(page.locator('.quiz-score i')).toHaveCount(5);
+  for (let i = 0; i < 5; i++) {
+    const answer = (await page.locator('#quiz-word').getAttribute('data-expect'))!;
+    await page.keyboard.press(keys[answer]);
+    await expect(page.locator('.quiz-score i.done')).toHaveCount(i + 1);
+  }
+  await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
+}
 async function learn(page: Page, snapshots = false) {
   await page.addInitScript(()=>localStorage.setItem('wayword.progress.ne.v1','["moving-in","second-lesson","counting","letters"]'));
   await page.goto('/?level=shop');
@@ -10,6 +26,10 @@ async function learn(page: Page, snapshots = false) {
   await page.getByRole('button', { name:'Say namaste to the shopkeeper' }).click();
   await page.getByRole('button', { name:'Learn the four words' }).click();
   for (const word of ['दायाँ', 'बायाँ', 'अगाडि', 'पछाडि']) await expect(page.locator('.direction-map')).toContainText(word);
+  // Step 1: every word has to be tried before the quick check opens.
+  await expect(page.locator('#lesson-next')).toBeDisabled();
+  for (const word of ['right', 'left', 'forward']) await page.locator(`[data-word="${word}"]`).click();
+  await expect(page.locator('#lesson-next')).toBeDisabled();
   await page.locator('[data-word="backward"]').click();
   await expect(page.locator('#word-explanation')).toContainText('without turning');
   const guide = page.locator('.direction-backward .latin-guide');
@@ -26,7 +46,7 @@ async function learn(page: Page, snapshots = false) {
   await page.getByRole('switch', { name:'Nepali script' }).click();
   await expect(nepali).toBeVisible();
   await page.screenshot({ path: snapshots ? 'test-results/word-lesson.png' : 'test-results/word-lesson-small.png' });
-  await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
+  await passQuiz(page);
   const words = ['दायाँ', 'बायाँ', 'अगाडि', 'पछाडि'];
   for (let i = 0; i < 4; i++) {
     await expect(page.locator('#pips')).toHaveAttribute('aria-label', `Practice ${i + 1} of 4`);
@@ -114,8 +134,8 @@ for (const phone of [false, true]) {
     if (!phone) {
       const counts = await page.evaluate(() => (window as typeof window & { __effectCounts?: { footsteps:number; bags:number; fruit:number; bottles:number } }).__effectCounts);
       expect(counts?.footsteps).toBeGreaterThan(0);
-      expect(counts?.bags).toBe(1);
-      expect(counts?.fruit).toBe(2);
+      expect(counts?.bags).toBe(2);
+      expect(counts?.fruit).toBe(1);
       expect(counts?.bottles).toBe(1);
     }
     await page.getByRole('button', { name:'Place items', exact:true }).click();
@@ -131,7 +151,7 @@ for (const phone of [false, true]) {
     if (!phone) await page.screenshot({ path:'test-results/packed-bag.png' });
     await page.getByRole('button', { name:'Pick up bag', exact:true }).click();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'exit');
-    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { bags:number } }).__effectCounts?.bags)).toBe(3);
+    if (!phone) expect(await page.evaluate(() => (window as typeof window & { __effectCounts?: { bags:number } }).__effectCounts?.bags)).toBe(4);
     await expect(page.locator('#basket')).toContainText('Carrying your packed shopping');
     await expect(page.locator('#results')).toBeHidden();
     // Restore scene focus after clicking the contextual action.
@@ -157,7 +177,8 @@ for (const phone of [false, true]) {
     await expect(page.locator('#position')).toContainText('Tile 4, 7');
     await expect(page.getByRole('button', { name:'Step forward', exact:true })).toBeDisabled();
     await expect(page.locator('#next-level')).toBeFocused();
-    if (phone) await page.getByRole('button', { name:'Next level' }).click();
+    await expect(page.locator('.next-chapter')).toContainText('The Morning Market');
+    if (phone) await page.getByRole('button', { name:'Step outside to the market' }).click();
     else await page.keyboard.press('Enter');
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'departing');
     await expect(page.locator('#results')).toBeHidden();
@@ -166,7 +187,7 @@ for (const phone of [false, true]) {
     if (phone) await page.getByRole('button', { name:'Continue', exact:false }).click();
     await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market', { timeout:15000 });
     await expect(page.locator('#results')).toBeHidden();
-    await expect(page.locator('#market-title')).toHaveText('The morning market.');
+    await expect(page.locator('#market-title')).toHaveText('Good morning, neighbor!');
     await expect(page.getByRole('button', { name:'Start exploring' })).toBeVisible();
     await expect(page.locator('.finale-topics li')).toHaveCount(4);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -192,7 +213,8 @@ test('radio is positional, keyboard controlled, persistent, and single-sourced a
   await page.getByRole('button', { name:'Say namaste to the shopkeeper' }).click();
   await page.getByRole('button', { name:'Learn the four words' }).click();
   expect(await page.evaluate(async () => (await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(false);
-  await page.getByRole('button', { name:'Let’s try it in the shop' }).click();
+  for (const word of ['right', 'left', 'forward', 'backward']) await page.locator(`[data-word="${word}"]`).click();
+  await passQuiz(page);
   await expect.poll(() => page.evaluate(async () => (await import('/src/shop-game.ts')).radio.sound?.isPlaying)).toBe(true);
   const audio = await page.evaluate(async () => {
     const { radio, scene } = await import('/src/shop-game.ts');
