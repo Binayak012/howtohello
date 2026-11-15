@@ -125,6 +125,43 @@ test('pronunciation defers the generated try-again cue',async({page})=>{
   await expect.poll(()=>page.evaluate(()=>Number(sessionStorage.getItem('try-again-voices')))).toBe(2);
 });
 
+test('pencil sound follows movement, stops when still or lifted, and yields to pronunciation',async({page})=>{
+  await page.addInitScript(()=>{
+    const createBufferSource=AudioContext.prototype.createBufferSource;
+    Object.defineProperty(AudioContext.prototype,'createBufferSource',{configurable:true,value(){
+      sessionStorage.setItem('pencil-starts',String(Number(sessionStorage.getItem('pencil-starts'))+1));
+      return createBufferSource.call(this);
+    }});
+    const stop=AudioBufferSourceNode.prototype.stop;
+    Object.defineProperty(AudioBufferSourceNode.prototype,'stop',{configurable:true,value(when?:number){
+      sessionStorage.setItem('pencil-stops',String(Number(sessionStorage.getItem('pencil-stops'))+1));
+      return stop.call(this,when);
+    }});
+    Object.defineProperty(HTMLMediaElement.prototype,'play',{configurable:true,value(){
+      return Promise.resolve();
+    }});
+  });
+  await page.goto('/unit/');
+  await page.locator('#tutorial-skip').click();
+  const board=await page.locator('#trace-ink').boundingBox();
+  await page.mouse.move(board!.x+80,board!.y+90);
+  await page.mouse.down();
+  await page.mouse.move(board!.x+105,board!.y+105);
+  await expect.poll(()=>page.evaluate(()=>Number(sessionStorage.getItem('pencil-starts')))).toBe(1);
+  await expect.poll(()=>page.evaluate(()=>Number(sessionStorage.getItem('pencil-stops')))).toBeGreaterThanOrEqual(1);
+  await page.mouse.move(board!.x+130,board!.y+115);
+  await expect.poll(()=>page.evaluate(()=>Number(sessionStorage.getItem('pencil-starts')))).toBe(2);
+  await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>Number(sessionStorage.getItem('pencil-stops')))).toBeGreaterThanOrEqual(2);
+  await page.locator('#hear-letter').click();
+  await expect(page.locator('#hear-letter')).toHaveClass(/is-speaking/);
+  await page.mouse.move(board!.x+70,board!.y+80);
+  await page.mouse.down();
+  await page.mouse.move(board!.x+110,board!.y+100);
+  await page.mouse.up();
+  expect(await page.evaluate(()=>Number(sessionStorage.getItem('pencil-starts')))).toBe(2);
+});
+
 test('the keyboard alternative celebrates once only after the valid passcode and yields to pronunciation',async({page})=>{
   await page.addInitScript(()=>{
     const log=(event:string)=>{const events=JSON.parse(sessionStorage.getItem('trace-audio-events')??'[]');events.push(event);sessionStorage.setItem('trace-audio-events',JSON.stringify(events));};

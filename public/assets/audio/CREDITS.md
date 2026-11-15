@@ -24,7 +24,8 @@
 - Original media: https://cdn.pixabay.com/audio/2025/01/06/audio_3ef878a271.mp3
 - License: Pixabay Content License
 - License URL: https://pixabay.com/service/license-summary/
-- Modifications: Played quietly as a short excerpt; source file is unchanged.
+- Modifications: Played quietly as a short excerpt for successful bag,
+  suitcase, and parcel pickups; source file is unchanged.
 - SHA-256: `decfc5afd7cbc459bd385635006c1b2f47d1904783e0160c2835823750773286`
 
 ## Footstep
@@ -35,9 +36,31 @@
 - Original media: https://cdn.pixabay.com/audio/2025/07/10/audio_a27fdedd26.mp3
 - License: Pixabay Content License
 - License URL: https://pixabay.com/service/license-summary/
-- Modifications: Played quietly with slight alternating playback-rate
-  variation; source file is unchanged.
+- Modifications: Played quietly during successful player walking throughout
+  the courtyard, shop, and market, with its 372 ms of leading silence skipped
+  at runtime and slight alternating playback-rate variation; source file is
+  unchanged.
 - SHA-256: `45edf737db4d0582269999d81b91b7f63f2b6d4364ab5bd4cf3065eeee48b950`
+
+## Generated UI Tap
+
+- Source: Original sound synthesized at runtime with Web Audio.
+- License: Project source license; no third-party audio asset is used.
+- Notes: A quiet two-part wooden tap with a short decay. Players can mute this
+  feedback independently from all other game audio.
+
+## Key Jingle
+
+- Creator: RoyalRose (via freesound_community on Pixabay)
+- Source: https://pixabay.com/sound-effects/household-key-jingle-36785/
+- Downloaded file: `key_jingle.mp3`
+- Original media: https://cdn.pixabay.com/audio/2022/03/10/audio_e532eab746.mp3
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Modifications: A quiet one-second excerpt beginning at 6.82 seconds is used
+  when Asha moves the room key from its hook to the table; source file is
+  unchanged.
+- SHA-256: `4282760c35f9291b2fdf083851234740919bef90d1e87483bca178198d1cf069`
 
 ## 11-Huuum4
 
@@ -120,3 +143,57 @@
 - Modifications: A quiet 4.5-second excerpt is layered beneath the completion
   “woo”; source file is unchanged.
 - SHA-256: `de5cfa07e0fe6fcebb5629e6a7a6cee3ac6831444494f97b7b0663b36c90095b`
+
+## Oops! (object bump)
+
+- Creator: jacqtydus
+- Source: https://pixabay.com/sound-effects/people-oops-391319/
+- Downloaded file: `bump_oops.mp3`
+- Original media: https://cdn.pixabay.com/audio/2025/08/18/audio_e1b392fd0a.mp3
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Modifications: A quiet ~0.55-second excerpt is used for soft object-collision
+  reactions; source file is unchanged.
+- SHA-256: `2a97c923ccc9d52d1b36bea52db1ab1e3b60aa97066b36dee4059e43399ca7b5`
+
+## ow sound (gentle object bump)
+
+- Creator: cmoki (via freesound_community on Pixabay)
+- Source: https://pixabay.com/sound-effects/people-ow-sound-38502/
+- Downloaded file: `bump_ouch.mp3`
+- Original media: https://cdn.pixabay.com/audio/2022/03/10/audio_f5f39bd915.mp3
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Modifications: A quiet ~0.45-second excerpt is used as a mild “ouch”
+  alternate for object collisions (no serious-pain framing); source file is
+  unchanged.
+- SHA-256: `db4b26111d7487d78610147b5c2efba3b4809357bda716364502f48d50307f90`
+
+## माफ गर्नुहोस् (NPC bump) — recording needed
+
+- Intended file: `ne/maaf_garnuhos.wav` (or `.mp3` with a matching loader path)
+- Phrase: माफ गर्नुहोस् (māph garnuhos) — “Excuse me / Sorry”
+- Requirement: a verified Nepali speaker recording (or a supported Nepali TTS
+  voice export). Do **not** substitute an English voice reading Nepali text.
+- Status: No redistributable, license-clear Nepali recording was available in
+  the repo or on Pixabay/Freesound at integration time. Object bumps ship;
+  NPC bumps are wired and will play once this asset is added under
+  `public/assets/audio/ne/maaf_garnuhos.wav`.
+
+## Shop word pronunciations (Piper Nepali · Chitwan)
+
+- Files: `ne/namaste.wav`, `ne/agadi.wav`, `ne/baaya.wav`, `ne/daaya.wav`,
+  `ne/pachhadi.wav`
+- Phrases: नमस्ते, अगाडि, बायाँ, दायाँ, पछाडि
+- Voice: Piper `ne_NP-chitwan-medium` (Nepali)
+- Model: https://huggingface.co/rhasspy/piper-voices/tree/main/ne/ne_NP/chitwan/medium
+- Dataset license: CC0 (Chitwan / Nabu Casa voice datasets)
+- Piper voices license: MIT
+- Modifications: Each clip is a single-word synthesis exported to 22,050 Hz
+  mono WAV; no English voice or Latin-transliteration reading was used.
+- SHA-256:
+  - `namaste.wav`: `7d844386bbe0ec5449d33556de05df03f7ef97b68eb5ce51637cfc8e00dacab8`
+  - `agadi.wav`: `c571c770b44d5e19263b5d93fd24996a4059da4e46067462df6ccfd2593bc39f`
+  - `baaya.wav`: `0af00f526e0b77f695e960761fdd56bf27d3725d99a503fd538a4f66017b4554`
+  - `daaya.wav`: `5d9825252b7fd23047e3197487b05d94384b157003481b70eb51cd6534abe88c`
+  - `pachhadi.wav`: `ee2bf31a62e134d861b19a51ce03efc4a52cf388399d63f64be92faf9c05b193`

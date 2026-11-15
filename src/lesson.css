@@ -9,6 +9,9 @@
 .direction-backward{--tile:#F8EFDA;--edge:#E4D3A9;--accent:#785F29}
 .direction-card .word-meaning{position:absolute;top:9px;left:12px;font-size:9px;letter-spacing:.055em;font-weight:800;text-transform:uppercase;color:var(--accent)}
 .direction-card .word-symbol{position:absolute;top:5px;right:7px;display:grid;place-items:center;width:25px;height:25px;border-radius:9px;background:#ffffffb5;box-shadow:inset 0 1px 0 white;color:var(--accent);font-size:19px;line-height:1}
+.direction-card .word-speaker{position:absolute;bottom:7px;left:9px;width:15px;height:15px;stroke:var(--accent);stroke-width:1.85;stroke-linejoin:round;stroke-linecap:round;opacity:.72;pointer-events:none}
+.direction-card.is-speaking .word-speaker{opacity:1;stroke:var(--teal)}
+.direction-card.is-speaking .speaker-waves{animation:word-speaking .85s ease-in-out infinite}
 .direction-card strong{color:var(--ink);font-size:32px;line-height:1.45;font-weight:700;letter-spacing:-.5px}
 .direction-card small.latin-guide{color:var(--accent);font-size:15px;font-weight:650;line-height:1.5;letter-spacing:.1px}
 .direction-card .card-selected{position:absolute;bottom:7px;right:7px;width:15px;height:15px;display:grid;place-items:center;background:var(--teal);color:white;border-radius:50%;font-size:9px;font-weight:800;opacity:0;scale:.6;transition:opacity .18s ease,scale .18s ease}
@@ -18,6 +21,8 @@
 .direction-card:focus-visible{outline:3px solid var(--teal);outline-offset:5px}
 .direction-card:active{translate:0 3px;box-shadow:inset 0 2px 0 #ffffff,0 1px 0 var(--edge)}
 @media(hover:hover){.direction-card:hover{translate:0 -2px;box-shadow:inset 0 2px 0 white,0 6px 0 var(--edge),0 13px 19px #2b23400d}.direction-card[aria-pressed=true]:hover{box-shadow:inset 0 2px 0 white,0 6px 0 var(--teal-d),0 13px 20px #1f7a7a22}}
+@keyframes word-speaking{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.direction-card.is-speaking .speaker-waves,.shop-greeting.is-speaking .speaker-waves{animation:none}}
 .word-lesson .you-marker{width:57px;height:57px;border:2px solid white;background:#F3CF7B;box-shadow:0 3px 0 #DDB75F,0 8px 18px #7c65321c}
 .word-lesson .you-marker span{font-size:25px;color:var(--ink)}
 .word-lesson .you-marker small{font-size:7px;letter-spacing:1.3px}

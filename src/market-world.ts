@@ -15,22 +15,37 @@ export const marketVisitsKey = 'wayword.market-visits.ne.v1';
 export const lostToy = { x:-14.4, z:7.8 };
 export type MarketTask = { id:ActivityId; picked:string[]; coins:number; carryingToy:boolean; delivered?:boolean };
 
-export function canWalkMarket(x: number, z: number, people?:readonly {x:number;z:number}[]): boolean {
+export type MarketBump = 'none' | 'object' | 'person';
+function marketPeopleAt(x: number, z: number, people?:readonly {x:number;z:number}[]): boolean {
+  if (people) return people.some(person => Math.hypot(x - person.x, z - person.z) < .58);
+  for (const side of [-1, 1]) for (const localZ of [16.8, 23.6, 37.2, 44]) {
+    if (side === 1 && localZ === 23.6) continue;
+    if (Math.hypot(x - (localZ - 25.6), z - (14 - side * 6.8)) < .58) return true;
+  }
+  for (const [px, pz] of [[4.6,7.8], [5.65,7.55], [2.7,20.25], [8,20.3]]) if (Math.hypot(x-px,z-pz)<.58) return true;
+  return false;
+}
+export function canWalkMarketWorld(x: number, z: number): boolean {
   if (x < -19 || x > 24 || z < 6.55 || z > 21.45) return false;
-  // Stall posts and counters, tree planters, and people have real footprints.
+  // Stall posts, counters, and tree planters have real footprints.
   for (const side of [-1, 1]) for (let i = 0; i < 8; i++) {
     if (side === 1 && (i === 2 || i === 3)) continue;
     const center = 10 + i * 6.8 - 26;
     if (i < 6 && Math.abs(x - center) < 2.17 && Math.abs(z - (side === 1 ? 5.35 : 22.65)) < 1.35) return false;
     if (i % 2 === 0 && Math.hypot(x - center - 2.8, z - (14 - side * 5.65)) < .83) return false;
   }
-  if(people){for(const person of people)if(Math.hypot(x-person.x,z-person.z)<.58)return false;return true;}
-  for (const side of [-1, 1]) for (const localZ of [16.8, 23.6, 37.2, 44]) {
-    if (side === 1 && localZ === 23.6) continue;
-    if (Math.hypot(x - (localZ - 25.6), z - (14 - side * 6.8)) < .58) return false;
-  }
-  for (const [px, pz] of [[4.6,7.8], [5.65,7.55], [2.7,20.25], [8,20.3]]) if (Math.hypot(x-px,z-pz)<.58) return false;
   return true;
+}
+export function canWalkMarket(x: number, z: number, people?:readonly {x:number;z:number}[]): boolean {
+  return canWalkMarketWorld(x, z) && !marketPeopleAt(x, z, people);
+}
+/** Classify an attempted walk step. NPC contact wins when both would block. */
+export function marketBump(pose: MarketPose, dx: number, dz: number, people?:readonly {x:number;z:number}[]): MarketBump {
+  if (Math.hypot(dx, dz) < 1e-6) return 'none';
+  const x = pose.x + dx, z = pose.z + dz;
+  if (canWalkMarket(x, z, people)) return 'none';
+  if (marketPeopleAt(x, z, people)) return 'person';
+  return 'object';
 }
 export function walkMarket(pose: MarketPose, dx: number, dz: number,people?:readonly {x:number;z:number}[]): MarketPose {
   let { x, z } = pose;

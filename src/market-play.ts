@@ -1,7 +1,8 @@
 import type { ShopScene } from './scene';
 import { numbers } from './numbers';
 import { completeLevel } from './progression';
-import { marketActivities, marketStart, nearbyActivity, walkMarket, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
+import { marketActivities, marketStart, nearbyActivity, walkMarket, marketBump, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
+import type { EffectsController } from './effects';
 
 /** Street movement and conversations are independent of the shop's tile lesson. */
 export class MarketExplorer {
@@ -27,7 +28,7 @@ export class MarketExplorer {
   private waypoint: HTMLElement;
   private status: HTMLElement;
 
-  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void) {
+  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void, private effects:EffectsController) {
     try {this.completed=new Set(readMarketVisits(localStorage));}catch{/* Exploration works without storage. */}
     host.hidden=false;host.dataset.mode='roam';
     host.innerHTML=`<aside class="market-journal"><p class="eyebrow">YOUR NEIGHBORHOOD</p><h2>Make yourself at home.</h2><p id="market-progress"></p><details><summary>People to meet</summary><div class="market-destinations">${marketActivities.map(activity=>`<button data-track="${activity.id}"><span>${activity.name}${activity.required?'':' · optional'}</span><small id="visit-${activity.id}">${this.completed.has(activity.id)?'✓ Visited':activity.hint}</small></button>`).join('')}</div></details><button class="market-review" data-market-action="review">Review numbers 1–5</button></aside><div class="market-waypoint" role="status"></div><span class="market-crosshair" aria-hidden="true">+</span><button id="market-talk" class="market-talk" disabled>Approach a neighbor to talk</button><p class="market-roam-status" role="status" aria-live="polite"></p><div class="market-touch" aria-label="Market movement controls"><button data-move="turnleft" aria-label="Look left">↶</button><button data-move="forward" aria-label="Walk forward">↑</button><button data-move="turnright" aria-label="Look right">↷</button><button data-move="left" aria-label="Walk left">←</button><button data-move="backward" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div><p class="market-keys">WASD move · ← → turn · drag to look · E / Space talk</p><section class="market-dialogue" role="dialog" aria-modal="false" aria-labelledby="market-dialogue-title" hidden></section>`;
@@ -48,7 +49,7 @@ export class MarketExplorer {
   }
   private focusWorld(){if(this.canvas)this.canvas.focus({preventScroll:true});else this.prompt.focus({preventScroll:true});}
   setPaused(paused:boolean){this.paused=paused;this.clearKeys();this.host.hidden=paused;if(!paused)this.focusWorld();}
-  private clearKeys=()=>{this.keys.clear();this.drag=undefined;};
+  private clearKeys=()=>{this.keys.clear();this.drag=undefined;this.effects.setWalking(false);this.effects.noteBump('none');};
   private keyDown=(event:KeyboardEvent)=>{
     if(this.paused)return;
     if(event.key==='Escape'&&this.conversation){event.preventDefault();this.closeConversation();return;}
@@ -77,18 +78,22 @@ export class MarketExplorer {
   private frame=(now:number)=>{
     this.raf=requestAnimationFrame(this.frame);
     const dt=Math.min(.05,this.last?(now-this.last)/1000:0);this.last=now;
-    if(this.paused||this.conversation)return;
+    if(this.paused||this.conversation){this.effects.setWalking(false);this.effects.noteBump('none');return;}
     const down=(...keys:string[])=>keys.some(key=>this.keys.has(key));
     const forward=Number(down('w','arrowup','forward'))-Number(down('s','arrowdown','backward'));
     const strafe=Number(down('d','right'))-Number(down('a','left'));
     const turn=Number(down('arrowleft','turnleft'))-Number(down('arrowright','turnright'));
+    const before={x:this.pose.x,z:this.pose.z};
     if(forward||strafe||turn){
       this.pose.yaw+=turn*1.75*dt;
+      const people=this.scene?.market.peopleObstacles();
       const norm=Math.max(1,Math.hypot(forward,strafe));
-      const dx=(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*2.8*dt/norm;
-      const dz=(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*2.8*dt/norm;
-      this.pose=walkMarket(this.pose,dx,dz,this.scene?.market.peopleObstacles());this.scene?.setMarketPose(this.pose);
-    }
+      const dx=forward||strafe?(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*2.8*dt/norm:0;
+      const dz=forward||strafe?(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*2.8*dt/norm:0;
+      this.effects.noteBump(marketBump(this.pose,dx,dz,people));
+      this.pose=walkMarket(this.pose,dx,dz,people);this.scene?.setMarketPose(this.pose);
+    }else this.effects.noteBump('none');
+    this.effects.setWalking(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.0001,now);
     this.host.dataset.marketX=this.pose.x.toFixed(3);this.host.dataset.marketZ=this.pose.z.toFixed(3);this.host.dataset.marketYaw=this.pose.yaw.toFixed(3);
     this.near=nearbyActivity(this.pose);
     const canPickToy=this.toyNearby()&&!this.completed.has('family')&&!this.tasks.get('family')?.carryingToy;
@@ -109,9 +114,17 @@ export class MarketExplorer {
     const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>('button'):null;if(!button||button.disabled)return;
     if(button.dataset.move&&event.detail===0&&!this.conversation){
       const move=button.dataset.move;
-      if(move==='turnleft'||move==='turnright')this.pose.yaw+=(move==='turnleft'?1:-1)*.4;
-      else{const forward=move==='forward'?1:move==='backward'?-1:0,strafe=move==='right'?1:move==='left'?-1:0;this.pose=walkMarket(this.pose,(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*.65,(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*.65,this.scene?.market.peopleObstacles());}
-      this.scene?.setMarketPose(this.pose);return;
+      const before={x:this.pose.x,z:this.pose.z};
+      if(move==='turnleft'||move==='turnright'){this.pose.yaw+=(move==='turnleft'?1:-1)*.4;this.effects.noteBump('none');}
+      else{
+        const people=this.scene?.market.peopleObstacles();
+        const forward=move==='forward'?1:move==='backward'?-1:0,strafe=move==='right'?1:move==='left'?-1:0;
+        const dx=(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*.65;
+        const dz=(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*.65;
+        this.effects.noteBump(marketBump(this.pose,dx,dz,people));
+        this.pose=walkMarket(this.pose,dx,dz,people);
+      }
+      this.scene?.setMarketPose(this.pose);if(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.001)this.effects.footstep();return;
     }
     if(button.dataset.track){this.tracked=button.dataset.track as ActivityId;this.status.textContent=`${marketActivities.find(activity=>activity.id===this.tracked)!.hint}. Follow the direction cue.`;this.focusWorld();return;}
     const action=button.dataset.marketAction;

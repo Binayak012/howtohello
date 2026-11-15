@@ -27,14 +27,27 @@ export function arrivalAction(state:ArrivalState,action:ArrivalAction):ArrivalSt
   if(action==='return-parcel'&&state.neighborGreeted&&state.parcelHeld)return{...state,parcelHeld:false,parcelReturned:true};
   return state;
 }
-export function canWalkArrival(x:number,z:number,people:readonly {x:number;z:number}[]=[]){
+export type ArrivalBump='none'|'object'|'person';
+export function canWalkArrivalWorld(x:number,z:number){
   if(Math.abs(x)>6.35||z< -3.65||z>6.7)return false;
   if(Math.hypot(x,z-.3)<1.08)return false;
   if(Math.abs(x+1.8)<.58&&Math.abs(z+.38)<.48)return false;
   if(x>3.85&&x<5.75&&z>2.7&&z<4.4)return false;
   if(x< -3.3&&x> -6&&Math.abs(z+2.8)<.57)return false;
   for(const [px,pz] of [[-6,-1.6],[6,-2.7],[5.8,5.5],[-5.8,5.8]])if(Math.hypot(x-px,z-pz)<.62)return false;
-  return !people.some(person=>Math.hypot(x-person.x,z-person.z)<.5);
+  return true;
+}
+export function canWalkArrival(x:number,z:number,people:readonly {x:number;z:number}[]=[]){
+  return canWalkArrivalWorld(x,z)&&!people.some(person=>Math.hypot(x-person.x,z-person.z)<.5);
+}
+/** Classify an attempted walk step. NPC contact wins when both would block. */
+export function arrivalBump(pose:ArrivalPose,dx:number,dz:number,people:readonly {x:number;z:number}[]=[]):ArrivalBump{
+  if(Math.hypot(dx,dz)<1e-6)return'none';
+  const x=pose.x+dx,z=pose.z+dz;
+  if(canWalkArrival(x,z,people))return'none';
+  const person=people.some(entry=>Math.hypot(x-entry.x,z-entry.z)<.5);
+  if(person)return'person';
+  return'object';
 }
 export function walkArrival(pose:ArrivalPose,dx:number,dz:number,people:readonly {x:number;z:number}[]=[]):ArrivalPose{
   let{x,z}=pose;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.1));

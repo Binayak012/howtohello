@@ -69,6 +69,8 @@ export class ShopScene {
   roamPose?: MarketPose;
   onMarketInteract?: (id: ActivityId) => void;
   onMarketItem?: (id:string)=>void;
+  onPlayerWalking?: (walking:boolean)=>void;
+  private playerWalking=false;
   carriedGoods=new THREE.Group();
   keeperGreetingAt=-10000;
   carryVisibleAt=0;
@@ -467,6 +469,7 @@ export class ShopScene {
     this.checkout = { items, from, at: performance.now(), last: -1, onScan, onReady };
   }
   resetCheckout() {
+    this.setPlayerWalking(false);
     this.departure = undefined; this.arrived = false;
     this.roamPose=undefined;this.market.resetActivities();
     this.carriedGoods.clear();this.carriedGoods.visible=true;this.carryVisibleAt=0;this.keeperGreetingAt=-10000;
@@ -488,6 +491,7 @@ export class ShopScene {
 
   walkIntoMarket(done: () => void) {
     this.clearPickup();
+    this.setPlayerWalking(false);
     this.departure = { at: performance.now(), done };
     this.marketStartedAt = performance.now();
     this.market.root.visible = true; this.thresholdGlow.visible = true;
@@ -496,6 +500,7 @@ export class ShopScene {
     if (this.reducedMotion) this.finishDeparture();
   }
   finishDeparture() {
+    this.setPlayerWalking(false);
     const done = this.departure?.done;
     this.departure = undefined; this.arrived = true;
     this.market.root.visible = true; this.hand.visible = false;
@@ -506,6 +511,11 @@ export class ShopScene {
   setMarketPose(pose: MarketPose) {
     if(!this.arrived)return;
     this.roamPose={...pose};this.movedAt=performance.now();
+  }
+  private setPlayerWalking(walking:boolean){
+    if(this.playerWalking===walking){if(walking)this.onPlayerWalking?.(true);return;}
+    this.playerWalking=walking;
+    this.onPlayerWalking?.(walking);
   }
   greetShopkeeper(){this.keeperGreetingAt=performance.now();}
   setMarketCarry(kind:'fruit'|'flowers'|'bread'|'toy'|undefined,count=1,delay=0){
@@ -650,6 +660,7 @@ export class ShopScene {
     if (this.market.root.visible) this.market.update((now - this.marketStartedAt) / 1000, this.arrived ? 1 : this.departure ? Math.min(1, (now - this.departure.at) / 9000) : 0, this.reducedMotion);
     if (this.departure) {
       const progress = Math.min(1, (now - this.departure.at) / 9000);
+      this.setPlayerWalking(!this.reducedMotion&&progress>.16&&progress<.62);
       // Pause at the hinge, step across the sill, then gently take in the street.
       const walk = THREE.MathUtils.smoothstep(progress, .16, .62);
       const turn = THREE.MathUtils.smoothstep(progress, .48, .92);
@@ -678,6 +689,7 @@ export class ShopScene {
     this.renderer.render(this.scene, this.camera);
   };
   dispose() {
+    this.setPlayerWalking(false);
     cancelAnimationFrame(this.raf); this.observer.disconnect();
     this.renderer.domElement.removeEventListener('click', this.click);
     this.thresholdGlow.traverse(object => {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canWalkMarket, marketActivities, marketStart, nearbyActivity, walkMarket, readMarketVisits } from '../src/market-world.ts';
+import { canWalkMarket, marketBump, marketActivities, marketStart, nearbyActivity, walkMarket, readMarketVisits } from '../src/market-world.ts';
 
 test('all four neighbors can be reached from the arrival footpath',()=>{
   const queue=[[1,8]],visited=new Set<string>();
@@ -28,4 +28,11 @@ test('collision follows people who step out of the way',()=>{
   assert.equal(canWalkMarket(-8.8,7.2),false);
   assert.equal(canWalkMarket(-8.8,7.2,[{x:-7,z:7.2}]),true);
   assert.equal(canWalkMarket(-7,7.2,[{x:-7,z:7.2}]),false);
+});
+test('market bumps classify stalls vs people with NPC priority',()=>{
+  const pose={...marketStart(),x:11.2,z:8};
+  assert.equal(marketBump(pose,0,0),'none');
+  assert.equal(marketBump(pose,0,-2),'object');
+  assert.equal(marketBump(pose,0,-.4,[{x:11.2,z:7.5}]),'person');
+  assert.equal(marketBump({...pose,z:6.9},0,-.5,[{x:11.2,z:6.5}]),'person');
 });

@@ -104,7 +104,7 @@ export function setupMapMusic(button: HTMLButtonElement): () => void {
     remember(); update();
   };
   function unlock(event: Event) {
-    if (event.target instanceof Element && event.target.closest('.map-music')) return;
+    if (event.target instanceof Element && event.target.closest('.map-music,a[href]')) return;
     if (desired && !document.hidden && engine?.context.state !== 'running') start();
   }
   function visibility() {

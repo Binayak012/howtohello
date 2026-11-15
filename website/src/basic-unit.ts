@@ -111,6 +111,7 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
     }
     ink.onpointerdown = event => {
       if (passed || guide.playing || pointer !== null || event.button !== 0) return;
+      celebration.stopPencil();
       guide.startPractice();
       event.preventDefault(); pointer = event.pointerId; ink.setPointerCapture(pointer);
       last = point(event);
@@ -119,13 +120,15 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
     ink.onpointermove = event => {
       if (event.pointerId !== pointer || !last) return;
       const next = point(event);
+      celebration.pencilMoved(Math.hypot(next.x - last.x, next.y - last.y));
       context.strokeStyle = '#1f7a7a'; context.lineWidth = 10; context.lineCap = 'round'; context.lineJoin = 'round';
       context.beginPath(); context.moveTo(last.x, last.y); context.lineTo(next.x, next.y); context.stroke(); last = next;
     };
-    function endStroke() { pointer = null; last = null; }
+    function endStroke() { celebration.stopPencil(); pointer = null; last = null; }
     ink.onpointerup = endStroke; ink.onpointercancel = endStroke; ink.onlostpointercapture = endStroke;
     app.querySelector<HTMLButtonElement>('#trace-clear')!.onclick = () => {
       if (passed) return;
+      celebration.stopPencil();
       context.clearRect(0, 0, 280, 240); guide.reset();
     };
     function nextLetter() {
@@ -138,6 +141,7 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
       ink.focus({ preventScroll: true });
     }
     check.onclick = () => {
+      celebration.stopPencil();
       if (guide.playing) { feedback.textContent = 'Watch the pencil finish, or select Your turn to start drawing.'; return; }
       if (passed) { if (index === 4) unlock(); else nextLetter(); return; }
       const userInk = context.getImageData(0, 0, 280, 240).data;

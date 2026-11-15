@@ -11,8 +11,8 @@ import './numbers.css';
 import './market-play.css';
 import { atCheckout, atShopDoor, baseBeats, facedRack, racks, routeTo, start, step, turn, type Item } from './core';
 import { EffectsController } from './effects';
-
 import { pack } from './pack';
+import { speakerIcon, WordPronouncer } from './pronunciation';
 import { RadioController, type RadioState } from './radio';
 import { ShopScene } from './scene';
 import { createStock, takeOne } from './stock';
@@ -23,7 +23,7 @@ const practice: Move[] = ['right', 'left', 'forward', 'backward'];
 const app = document.querySelector<HTMLDivElement>('#app')!;
 try { recordLanguageStarted(localStorage, 'ne'); } catch { /* Optional browser-local learning history. */ }
 app.innerHTML = `
-  <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 03</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
+  <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 03</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="tap-sounds" class="quiet tap-toggle" type="button"></button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
     <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="round" aria-label="Show a navigation hint">?</button></div>
@@ -59,6 +59,14 @@ try { scene = new ShopScene(el('scene'), (id, unitId) => act('take', id, unitId)
 catch { el('scene').innerHTML = '<div class="scene-fallback">Your shop map<div id="map"></div><p>Use the controls to explore. Bright tiles are shelves.</p></div>'; }
 export const radio = new RadioController(scene?.camera, scene?.radioAnchor);
 export const effects = new EffectsController(radio.listener, scene?.keeper);
+const pronouncer = new WordPronouncer({
+  onPlayingChange: playing => effects.setSpeechBusy(playing),
+  duckRadio: () => radio.duck(),
+  restoreRadio: () => radio.restoreDuck(),
+  isCharacterSpeaking: () => effects.isCharacterSpeaking(),
+});
+if(scene)scene.onPlayerWalking=walking=>effects.setWalking(walking);
+const disposeTapControls=effects.bindTapControls(app,el('tap-sounds') as HTMLButtonElement);
 const radioButton = el('radio-toggle') as HTMLButtonElement;
 radio.subscribe((state: RadioState) => {
   const on = radio.enabled && state !== 'unavailable';
@@ -76,16 +84,22 @@ function pulseCue() {
 }
 function resetIdle() { clearTimeout(idleTimer); if (!['story', 'learn', 'scanning', 'complete', 'departing', 'market'].includes(phase)) idleTimer = setTimeout(pulseCue, 20000); }
 function directionCards() {
-  return practice.map(key => { const word = pack.directions[key]; return `<button class="direction-card direction-${key}" data-word="${key}" aria-pressed="false"><span class="word-meaning">${word.en.split(' / ')[0]}</span><span class="word-symbol" aria-hidden="true">${word.symbol}</span><strong lang="ne">${word.text}</strong><small class="latin-guide" lang="ne-Latn">${word.roman}</small><span class="card-selected" aria-hidden="true">✓</span></button>`; }).join('');
+  return practice.map(key => {
+    const word = pack.directions[key];
+    return `<button class="direction-card direction-${key}" data-word="${key}" aria-pressed="false" aria-label="${pronouncer.hearLabel(word.text)}. ${word.en.split(' / ')[0]}"><span class="word-meaning">${word.en.split(' / ')[0]}</span><span class="word-symbol" aria-hidden="true">${word.symbol}</span>${speakerIcon}<strong lang="ne">${word.text}</strong><small class="latin-guide" lang="ne-Latn">${word.roman}</small><span class="card-selected" aria-hidden="true">✓</span></button>`;
+  }).join('');
 }
 function showStory() {
+  pronouncer.stop();
   el('welcome').hidden = false;
   el('intro-card').classList.remove('word-lesson');
-  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 03 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is opening for the day, and you have a short list.</p><blockquote>“Namaste! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper" aria-pressed="false"><strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary" disabled>Learn the four words ↗</button><small class="welcome-keys">Say hello → learn → shop → meet the neighborhood</small>`;
+  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 03 · A NEW NEIGHBORHOOD</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>You’ve just moved into the neighborhood.<br>A small shop is opening for the day, and you have a short list.</p><blockquote>“Namaste! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper. ${pronouncer.hearLabel('नमस्ते')}" aria-pressed="false">${speakerIcon}<strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><div class="shopping-list"><span>1 reusable bag</span><span>2 fruit</span><span>1 bottle</span></div><p class="instructions">Four Nepali words will help you find your way.<br>Learn them, try them, then do the shopping.</p><button id="begin" class="primary" disabled>Learn the four words ↗</button><small class="welcome-keys">Say hello → learn → shop → meet the neighborhood</small>`;
   el('shop-greeting').onclick = () => {
+    const greeting = el('shop-greeting');
     scene?.greetShopkeeper();
-    el('shop-greeting').setAttribute('aria-pressed','true');
+    greeting.setAttribute('aria-pressed','true');
     (el('begin') as HTMLButtonElement).disabled=false;
+    pronouncer.play('namaste', greeting);
     say('“Namaste! It’s lovely to meet you.”','You’ve said hello in Nepali. You can greet your market neighbors the same way.');
     el('begin').focus();
   };
@@ -93,19 +107,22 @@ function showStory() {
   el('welcome-title').focus({preventScroll:true});
 }
 function showWords() {
+  pronouncer.stop();
   phase = 'learn'; render();
   el('intro-card').classList.add('word-lesson');
   el('intro-card').innerHTML = `<div class="eyebrow">YOUR FIRST FOUR WORDS</div><h1 id="welcome-title" tabindex="-1">Find your bearings.</h1><p class="script-intro">New to Devanagari? Start with the Latin letters.<br>Match the word to its meaning, then try the move.</p><div class="direction-map">${directionCards()}<div class="you-marker" aria-label="You, facing forward"><span>↑</span><small>YOU</small></div></div><div class="word-detail"><span class="detail-spark" aria-hidden="true">✦</span><p id="word-explanation" class="word-explanation">${pack.directions.right.lesson}</p></div><button id="begin" class="primary lesson-cta"><span>Let’s try it in the shop</span><span aria-hidden="true">↗</span></button><div class="reading-preference"><span class="reading-option"><span>ने &nbsp; Nepali script</span><button id="lesson-nepali-toggle" role="switch" aria-label="Nepali script" aria-checked="${nepaliScript}">${nepaliScript ? 'On' : 'Off'}</button></span><span class="reading-option"><span>Aa &nbsp; Latin-letter guides</span><button id="lesson-reading-toggle" role="switch" aria-label="Latin-letter guides" aria-checked="${readingHelp}">${readingHelp ? 'On' : 'Off'}</button></span></div>`;
   el('lesson-nepali-toggle').onclick = () => setNepaliScript(!nepaliScript);
   el('lesson-reading-toggle').onclick = () => setReadingHelp(!readingHelp);
-  const select = (key: Move) => {
+  const select = (key: Move, button?: HTMLButtonElement, speak = true) => {
     el('word-explanation').textContent = pack.directions[key].lesson;
-    document.querySelectorAll<HTMLElement>('[data-word]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.word === key)));
+    document.querySelectorAll<HTMLElement>('[data-word]').forEach(card => card.setAttribute('aria-pressed', String(card.dataset.word === key)));
     el('intro-card').dataset.direction = key;
+    if (speak) pronouncer.play(key, button ?? document.querySelector<HTMLElement>(`[data-word="${key}"]`) ?? undefined);
   };
-  document.querySelectorAll<HTMLButtonElement>('[data-word]').forEach(button => button.onclick = () => select(button.dataset.word as Move));
-  select('right');
+  document.querySelectorAll<HTMLButtonElement>('[data-word]').forEach(button => button.onclick = () => select(button.dataset.word as Move, button));
+  select('right', undefined, false);
   el('begin').onclick = () => {
+    pronouncer.stop();
     phase = 'practice'; el('welcome').hidden = true; render(); focusScene(); resetIdle();
     say('Let’s try it together.', pack.directions.right.lesson);
   };
@@ -121,7 +138,7 @@ function render() {
   document.querySelector<HTMLElement>('.game')!.setAttribute('aria-label', phase === 'market' ? 'Morning market number lesson' : 'Shop language lesson');
   const inStore = ['practice','shop','checkout','scanning','collect','exit'].includes(phase);
   radio.setInside(inStore);
-  effects.setActive(inStore);
+  effects.setActive(inStore || phase === 'departing' || phase === 'market');
 
   scene?.setPlayer(player);
   scene?.setHighlight(phase === 'shop' ? misses >= 3 ? baseBeats[index].expect.replace('take:', '') : facedRack(player)?.id : undefined);
@@ -190,10 +207,12 @@ function move(action: string) {
   if (action === 'forward' || action === 'backward') {
     const next = step(player, action === 'backward');
     if (next === player) {
+      effects.noteBump('object');
       say(player.col === 4 && player.row === 7 ? 'Visit the counter before you leave.' : 'There’s something in the way.', 'Turn toward the open aisle.'); return false;
     }
+    effects.noteBump('none');
     player = next;
-  }
+  } else effects.noteBump('none');
   return true;
 }
 function act(action: string, rackId?: string, unitId?: string) {
@@ -313,7 +332,7 @@ function startExploring() {
   numberLesson?.dispose();numberLesson=undefined;
   el('market-arrival').hidden=true;
   if(explorer) explorer.setPaused(false);
-  else explorer=new MarketExplorer(el('market-roam'),scene,openNumberLesson);
+  else explorer=new MarketExplorer(el('market-roam'),scene,openNumberLesson,effects);
 }
 function openNumberLesson() {
   if (phase !== 'market' || numberLesson) return;
@@ -349,6 +368,7 @@ function restart() {
   explorer?.dispose();explorer=undefined;numberLearned=false;
   numberLesson?.dispose(); numberLesson = undefined;
   run++; clearTimeout(advanceTimer); clearTimeout(idleTimer); clearTimeout(fallbackTimer);
+  pronouncer.stop();
   effects.cancel();
   phase = 'story'; player = start(); practiceIndex = 0; index = 0; misses = 0; helped = false; busy = false; stock = createStock(); outcomes = [];
   scene?.resetStock(); scene?.setPlayer(player, true);
@@ -399,9 +419,15 @@ window.addEventListener('keydown', event => {
   if (phase === 'market') return;
   if (event.target instanceof HTMLButtonElement && (event.key === ' ' || event.key === 'Enter')) return;
   const action = ({ ArrowLeft:'left', ArrowRight:'right', ArrowUp:'forward', ArrowDown:'backward', ' ':'take' } as Record<string, string>)[event.key];
-  if (action) { event.preventDefault(); if (!event.repeat) act(action); }
+  if (action) {
+    event.preventDefault();
+    if (!event.repeat) {
+      act(action);
+      if (!['story', 'learn', 'complete'].includes(phase)) focusScene();
+    }
+  }
 });
-window.addEventListener('pagehide', () => { effects.dispose(); radio.dispose(); }, { once: true });
+window.addEventListener('pagehide', () => { pronouncer.dispose(); disposeTapControls(); effects.dispose(); radio.dispose(); }, { once: true });
 
 restart();
 // Resume an unlocked market from the map without replaying the shop tutorial.
