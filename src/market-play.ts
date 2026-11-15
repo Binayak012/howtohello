@@ -91,7 +91,7 @@ export class MarketExplorer {
     try {this.completed=new Set(readMarketVisits(localStorage));}catch{/* Exploration works without storage. */}
     this.marketAudio.setToyMissing(!this.completed.has('family'));
     host.hidden=false;host.dataset.mode='roam';host.dataset.peek='false';
-    host.innerHTML=`<aside class="market-journal word-strip" aria-label="What to do now"><p class="eyebrow" id="market-step-count"></p><p class="market-instruction" id="market-instruction" aria-live="polite"></p><p id="market-progress" class="sr-only"></p><div class="errand-chips">${marketActivities.map(activity=>`<button data-track="${activity.id}" aria-pressed="false" aria-label="${errandNames[activity.id]}: ${activity.name}${activity.required?'':' (optional)'}" ${activity.required?'':'data-optional="true"'}><span class="chip-icon" aria-hidden="true">${icons[activity.id]}</span><span class="chip-word" lang="ne">${errandWords[activity.id].replace(' teddy','')}</span><i class="chip-done" aria-hidden="true">✓</i></button>`).join('')}</div></aside><aside class="market-help" aria-label="Help"><div class="market-hint" role="status" hidden><p id="market-hint-text"></p><button class="hint-close" data-market-action="hint-close" aria-label="Close hint">✕</button></div><div class="strip-tools"><button class="help-main" data-market-action="peek" aria-label="Hint"><span aria-hidden="true">💡</span> Hint</button><button data-market-action="face-target" aria-label="Turn me toward it" title="Turn toward your goal">🧭</button><button class="strip-review" data-market-action="review" aria-label="Review numbers 1–5" title="Review numbers">१–५</button></div></aside><div class="market-waypoint" aria-hidden="true"><span class="wp-icon"></span><span class="cue-arrow"><i>↑</i></span><span class="wp-word"><strong lang="ne"></strong><span class="latin-guide"></span><small class="gloss"></small></span></div><span class="market-crosshair" aria-hidden="true">+</span><button id="market-talk" class="market-talk" disabled aria-label="Approach a neighbor to talk"></button><p class="market-roam-status" role="status" aria-live="polite"></p><div class="word-toast" role="status" aria-live="polite" hidden></div><div class="market-touch" aria-label="Market movement controls"><button data-move="turnleft" aria-label="Look left">↶</button><button data-move="forward" aria-label="Walk forward">↑</button><button data-move="turnright" aria-label="Look right">↷</button><button data-move="left" aria-label="Walk left">←</button><button data-move="backward" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div><p class="market-keys"><kbd>W A S D</kbd> walk · <kbd>← →</kbd> turn · <kbd>E</kbd> talk</p><section class="market-dialogue word-bubble" role="dialog" aria-modal="false" aria-labelledby="market-dialogue-title" hidden></section>`;
+    host.innerHTML=`<aside class="market-journal word-strip" data-open="false" aria-label="What to do now"><button type="button" class="task-toggle" data-market-action="task-toggle" aria-expanded="false" aria-controls="market-task-panel"><span class="task-toggle-mark" aria-hidden="true">✦</span><span class="task-toggle-copy"><strong>Task</strong><small id="market-step-pill">Errand 1 of 3</small></span></button><div class="market-task-panel" id="market-task-panel" role="region" aria-label="Current task" hidden><header class="market-task-head"><p class="eyebrow" id="market-step-count"></p><button type="button" class="task-close" data-market-action="task-close" aria-label="Close task">✕</button></header><p class="market-instruction" id="market-instruction" aria-live="polite"></p><p id="market-progress" class="sr-only"></p><div class="errand-chips">${marketActivities.map(activity=>`<button data-track="${activity.id}" aria-pressed="false" aria-label="${errandNames[activity.id]}: ${activity.name}${activity.required?'':' (optional)'}" ${activity.required?'':'data-optional="true"'}><span class="chip-icon" aria-hidden="true">${icons[activity.id]}</span><span class="chip-word" lang="ne">${errandWords[activity.id].replace(' teddy','')}</span><i class="chip-done" aria-hidden="true">✓</i></button>`).join('')}</div></div></aside><aside class="market-help" aria-label="Help"><div class="market-hint" role="status" hidden><p id="market-hint-text"></p><button class="hint-close" data-market-action="hint-close" aria-label="Close hint">✕</button></div><div class="strip-tools"><button class="help-main" data-market-action="peek" aria-label="Hint"><span aria-hidden="true">💡</span> Hint</button><button data-market-action="face-target" aria-label="Turn me toward it" title="Turn toward your goal">🧭</button><button class="strip-review" data-market-action="review" aria-label="Review numbers 1–5" title="Review numbers">१–५</button></div></aside><div class="market-waypoint" aria-hidden="true"><span class="wp-icon"></span><span class="cue-arrow"><i>↑</i></span><span class="wp-word"><strong lang="ne"></strong><span class="latin-guide"></span><small class="gloss"></small></span></div><span class="market-crosshair" aria-hidden="true">+</span><button id="market-talk" class="market-talk" disabled aria-label="Approach a neighbor to talk"></button><p class="market-roam-status" role="status" aria-live="polite"></p><div class="word-toast" role="status" aria-live="polite" hidden></div><div class="market-touch" aria-label="Market movement controls"><button data-move="turnleft" aria-label="Look left">↶</button><button data-move="forward" aria-label="Walk forward">↑</button><button data-move="turnright" aria-label="Look right">↷</button><button data-move="left" aria-label="Walk left">←</button><button data-move="backward" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div><p class="market-keys"><kbd>W A S D</kbd> walk · <kbd>← →</kbd> turn · <kbd>E</kbd> talk</p><section class="market-dialogue word-bubble" role="dialog" aria-modal="false" aria-labelledby="market-dialogue-title" hidden></section>`;
     this.prompt=host.querySelector('#market-talk')!;this.dialogue=host.querySelector('.market-dialogue')!;
     this.waypoint=host.querySelector('.market-waypoint')!;this.status=host.querySelector('.market-roam-status')!;this.hintBox=host.querySelector('.market-hint')!;
     this.taskBoard=document.createElement('aside');this.taskBoard.className='market-task word-tray';this.taskBoard.hidden=true;host.append(this.taskBoard);
@@ -105,6 +105,7 @@ export class MarketExplorer {
     this.canvas?.addEventListener('pointerdown',this.lookDown);this.canvas?.addEventListener('pointermove',this.lookMove);this.canvas?.addEventListener('pointerup',this.lookUp);this.canvas?.addEventListener('pointercancel',this.lookUp);
     window.addEventListener('keydown',this.keyDown);window.addEventListener('keyup',this.keyUp);window.addEventListener('blur',this.clearKeys);document.addEventListener('visibilitychange',this.clearKeys);
     this.tracked=this.nextErrand()??'fruit';this.markTracked();
+    this.setTaskOpen(false,false);
     this.updateProgress();this.frame(performance.now());this.focusWorld();
   }
   private focusWorld(){if(this.canvas)this.canvas.focus({preventScroll:true});else this.prompt.focus({preventScroll:true});}
@@ -128,6 +129,7 @@ export class MarketExplorer {
   private keyDown=(event:KeyboardEvent)=>{
     if(this.paused)return;
     if(event.key==='Escape'&&this.conversation){event.preventDefault();this.closeConversation();return;}
+    if(event.key==='Escape'&&this.host.querySelector('.market-journal')?.getAttribute('data-open')==='true'){event.preventDefault();this.setTaskOpen(false);return;}
     if(this.conversation || event.target instanceof HTMLElement && event.target.closest('input,textarea,select,summary'))return;
     const key=event.key.toLowerCase();
     if(event.target instanceof HTMLElement&&event.target.closest('button')&&(key===' '||key==='enter'))return;
@@ -217,6 +219,8 @@ export class MarketExplorer {
     }
     if(button.dataset.track){this.tracked=button.dataset.track as ActivityId;this.markTracked();this.progressed();this.focusWorld();return;}
     const action=button.dataset.marketAction;
+    if(action==='task-toggle'){this.setTaskOpen(this.host.querySelector('.market-journal')?.getAttribute('data-open')!=='true');return;}
+    if(action==='task-close'){this.setTaskOpen(false);this.focusWorld();return;}
     if(action==='review'){this.review();return;}
     if(action==='peek'){this.showHint();return;}
     if(action==='hint-close'){this.hideHint();this.focusWorld();return;}
@@ -320,7 +324,7 @@ export class MarketExplorer {
     this.activeTask=task?activity.id:this.activeTask;
     if(task&&this.greeted.has(activity.id)&&(task.picked.length||task.coins||task.carryingToy||task.delivered)){this.deliverTask();return;}
     this.progressed();
-    this.conversation={activity,stage:this.greeted.has(activity.id)?this.completed.has(activity.id)?'done':'brief':'greet'};this.host.dataset.mode='conversation';
+    this.setTaskOpen(false,false);this.conversation={activity,stage:this.greeted.has(activity.id)?this.completed.has(activity.id)?'done':'brief':'greet'};this.host.dataset.mode='conversation';
     this.marketAudio.setDialogueBusy(true);
     this.scene?.market.react(activity.id,'greet',this.pose);
     this.pose.yaw=Math.atan2(-(activity.x-this.pose.x),-(activity.z-this.pose.z));this.pose.pitch=0;this.scene?.setMarketPose(this.pose);this.renderConversation();
@@ -576,7 +580,21 @@ export class MarketExplorer {
   }
   private progressed(){this.lastProgress=performance.now();this.hideHint();}
   private hideHint(){clearTimeout(this.hintTimer);if(this.hintBox)this.hintBox.hidden=true;}
-  /** One plain sentence in the top-left: the very next thing to do. */
+  /** Compact Task button by default; full errand card opens on demand. */
+  private setTaskOpen(open:boolean, focus=true){
+    const journal=this.host.querySelector<HTMLElement>('.market-journal');
+    const panel=this.host.querySelector<HTMLElement>('#market-task-panel');
+    const toggle=this.host.querySelector<HTMLButtonElement>('.task-toggle');
+    if(!journal||!panel||!toggle)return;
+    journal.dataset.open=String(open);
+    panel.hidden=!open;
+    toggle.setAttribute('aria-expanded',String(open));
+    if(!focus)return;
+    if(open)panel.querySelector<HTMLElement>('.task-close')?.focus();
+    else{toggle.focus({preventScroll:true});this.focusWorld();}
+  }
+
+  /** One plain sentence for the task card: the very next thing to do. */
   private renderInstruction(){
     const ne=(text:string)=>`<b lang="ne">${text}</b>`;
     const required=marketActivities.filter(activity=>activity.required),done=required.filter(activity=>this.completed.has(activity.id)).length;
@@ -593,9 +611,12 @@ export class MarketExplorer {
     else if(done===required.length&&!this.nextErrand())step='🎉 All done! Keep exploring.';
     else step=`Walk to ${person(this.tracked)}. Follow the arrow.`;
     const count=done===required.length?'FINALE COMPLETE':`ERRAND ${Math.min(done+1,required.length)} OF ${required.length}`;
+    const pill=done===required.length?'Complete':`Errand ${Math.min(done+1,required.length)} of ${required.length}`;
     const key=count+step;if(key===this.instructionKey)return;this.instructionKey=key;
     this.host.querySelector('#market-step-count')!.textContent=count;
+    this.host.querySelector('#market-step-pill')!.textContent=pill;
     this.host.querySelector('#market-instruction')!.innerHTML=step;
+    this.host.querySelector('#market-progress')!.textContent=`${count}. ${this.host.querySelector('#market-instruction')!.textContent??''}`;
   }
   /** Bottom-left help: what the words mean and exactly what to do, plus every English meaning for a few seconds. */
   private showHint(){
