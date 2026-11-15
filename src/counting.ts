@@ -6,6 +6,7 @@ import {ArrivalScene} from './arrival-scene';
 import {numbers,apple} from './numbers';
 import {appleCount,rounds,recall,initialCounting,seeNumber,canStartCounting,addApple,removeApple,giveBasket,answerCount,counted,recalled,type CountingState} from './counting-state';
 import {completeLevel,levelHref,nextLevel} from './progression';
+import { logo } from './brand';
 
 type Phase='intro'|'study'|'count'|'recall'|'complete'|'look';
 type Point=[number,number,number];
@@ -27,7 +28,7 @@ class CountingGame{
   constructor(){
     this.app.className='arrival-app unpack-app counting-app';this.app.dataset.readingHelp='true';
     const home=import.meta.env.BASE_URL==='/game/'?'/':'./';
-    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><span class="arrival-chapter">CHAPTER 03 · COUNTING WITH LILA</span><div class="arrival-header-actions"><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="count-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
+    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><a class="arrival-brand" href="${home}" aria-label="howtohello home">${logo}</a><span class="arrival-chapter">CHAPTER 03 · COUNTING WITH LILA</span><div class="arrival-header-actions"><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="count-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
     this.panel=this.app.querySelector('.unpack-panel')!;this.overlay=this.app.querySelector('#arrival-overlay')!;
     try{
       this.scene=new ArrivalScene(this.app.querySelector('#arrival-world')!,()=>{});

@@ -31,7 +31,7 @@ test('home, auth, language selection, map and game connect on one origin', async
   await page.locator('.journey-level-1 .level-label').getByRole('link', { name: 'Start this quest', exact:false }).click();
   await expect(page).toHaveURL(/\/game\/index.html\?level=moving-in$/);
   await expect(page.getByRole('heading', { name: 'Your first hello.' })).toBeVisible();
-  await page.getByRole('link', { name: 'Wayword home' }).click();
+  await page.getByRole('link', { name: 'howtohello home' }).click();
   await expect(page).toHaveURL('http://127.0.0.1:4174/');
   await expect(page.locator('.hero h1')).toBeVisible();
   expect(errors).toEqual([]);

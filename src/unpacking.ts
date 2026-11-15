@@ -5,6 +5,7 @@ import {ArrivalScene} from './arrival-scene';
 import {colors,colorOrder,items,checks,initialUnpack,see,canStartUnpacking,pick,answer,currentItem,unpacked,checked,type ColorId,type ItemId,type UnpackState} from './unpack-state';
 import {completeLevel,levelHref,nextLevel} from './progression';
 import {EffectsController} from './effects';
+import { logo } from './brand';
 
 type Phase='intro'|'study'|'unpack'|'check'|'complete';
 type Point=[number,number,number];
@@ -35,7 +36,7 @@ class UnpackingGame{
   constructor(){
     this.app.className='arrival-app unpack-app';this.app.dataset.readingHelp='true';
     const home=import.meta.env.BASE_URL==='/game/'?'/':'./';
-    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><div class="lesson-navigation"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><a class="lesson-back-map arrival-quiet" href="/map/index.html">← Back to map</a></div><span class="arrival-chapter">CHAPTER 02 · UNPACK YOUR SUITCASE</span><div class="arrival-header-actions"><button id="tap-sounds" class="arrival-quiet" type="button"></button><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="unpack-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
+    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><div class="lesson-navigation"><a class="arrival-brand" href="${home}" aria-label="howtohello home">${logo}</a><a class="lesson-back-map arrival-quiet" href="/map/index.html">← Back to map</a></div><span class="arrival-chapter">CHAPTER 02 · UNPACK YOUR SUITCASE</span><div class="arrival-header-actions"><button id="tap-sounds" class="arrival-quiet" type="button"></button><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="unpack-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
     this.panel=this.app.querySelector('.unpack-panel')!;this.overlay=this.app.querySelector('#arrival-overlay')!;
     try{
       this.scene=new ArrivalScene(this.app.querySelector('#arrival-world')!,()=>{});

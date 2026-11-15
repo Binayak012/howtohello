@@ -1,0 +1,17 @@
+/* howtohello logo (see brand.ts). Sizes: --logo-mark for the bubble; the wordmark follows the link's font size. */
+.logo-mark{flex:none;width:var(--logo-mark,40px);height:auto;aspect-ratio:50/48;margin-right:.3em;overflow:visible;transform:rotate(-6deg);transition:transform .25s ease}
+a:hover>.logo-mark,a:focus-visible>.logo-mark{transform:rotate(4deg) scale(1.06)}
+.logo-shadow{fill:var(--teal-d,#145454)}
+.logo-bubble{fill:var(--teal,#1F7A7A)}
+.logo-shine{fill:none;stroke:#ffffff66;stroke-width:2.2;stroke-linecap:round}
+.logo-face{fill:#fff}
+.logo-smile{fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round}
+.logo-spark{fill:var(--marigold,#F4B63F)}
+.logo-word{font-weight:800;letter-spacing:-.045em;white-space:nowrap;line-height:1}
+.logo-how{color:var(--ink,#2B2340);opacity:.82;font-weight:700}
+.logo-hello{color:var(--teal,#1F7A7A)}
+.logo-dot{color:var(--marigold,#F4B63F)}
+.footer .logo-mark{--logo-mark:31px}
+.map-nav .logo-mark,.journey-nav .logo-mark{--logo-mark:33px}
+@media(max-width:560px){.logo-mark{--logo-mark:32px}}
+@media(prefers-reduced-motion:reduce){.logo-mark,a:hover>.logo-mark{transition:none;transform:rotate(-6deg)}}
