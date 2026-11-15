@@ -26,16 +26,27 @@ test('learners can ask the shopkeeper the way; the game supplies the true direct
     const nepali=/kahaa|कहाँ/.test(body.message);
     await route.fulfill({json:{nepali:'झोला तपाईंको बायाँ छ।',roman:'jhola tapaaiko baayaa chha.',english:'The bags are on your left.',tip:nepali?'':'Next time try: jhola kahaa chha?',success:nepali}});
   });
+  const spoken:string[]=[];
+  await page.route('**/api/speak**',route=>{spoken.push(route.request().url());return route.fulfill({status:503,json:{error:'not-configured'}});});
   await reachShop(page);
-  await expect(page.getByRole('button',{name:'Ask the way'})).toBeVisible();
-  await page.getByRole('button',{name:'Ask the way'}).click();
+  await expect(page.getByRole('button',{name:'Ask the shopkeeper the way'})).toBeVisible();
+  // When shopping starts, a callout points at the shopkeeper and shows how to ask.
+  await expect(page.locator('#ask-callout')).toContainText('कहाँ छ?');
+  await page.screenshot({path:'test-results/shop-ask-intro.png'});
+  await page.getByRole('button',{name:'Ask the shopkeeper the way'}).click();
   const input=page.getByRole('textbox',{name:'Your question'});
   await expect(input).toBeFocused();
+  await expect(page.locator('#ask-callout')).toBeHidden();
   // Arrow keys type in the box instead of walking.
   const before=await page.locator('#interact').isHidden();
   await input.fill('where is the bag');await page.keyboard.press('ArrowLeft');await input.press('Enter');
   await expect(page.locator('.ask-answer')).toContainText('बायाँ');
   await expect(page.locator('.ask-tip')).toContainText('kahaa chha');
+  // The shopkeeper says the answer out loud, in the shopkeeper's voice.
+  await expect.poll(()=>spoken.length).toBe(1);
+  const url=new URL(spoken[0]);expect(url.searchParams.get('who')).toBe('shop');expect(url.searchParams.get('text')).toBe('झोला तपाईंको बायाँ छ।');
+  await page.getByRole('button',{name:'Hear it again'}).click();
+  await expect.poll(()=>spoken.length).toBe(2);
   expect(await page.locator('#interact').isHidden()).toBe(before);
   // The shopkeeper hears where everything really is from the player's spot (4,7 facing north).
   expect(asked[0]).toMatchObject({neighbor:'shop',stage:'ask',shop:{want:'bag',places:{counter:['forward'],door:['backward'],bag:['left'],book:['right']}}});
@@ -53,11 +64,11 @@ test('learners can ask the shopkeeper the way; the game supplies the true direct
 test('without an AI key the Ask button disappears and Hint still helps',async({page})=>{
   await page.route('**/api/shopkeeper',route=>route.fulfill({status:503,json:{error:'not-configured'}}));
   await reachShop(page);
-  await page.getByRole('button',{name:'Ask the way'}).click();
+  await page.getByRole('button',{name:'Ask the shopkeeper the way'}).click();
   await page.getByRole('textbox',{name:'Your question'}).fill('chiya kahaa chha?');
   await page.getByRole('textbox',{name:'Your question'}).press('Enter');
   await expect(page.locator('#ask-status')).toContainText('isn’t set up');
-  await expect(page.getByRole('button',{name:'Ask the way'})).toBeHidden();
+  await expect(page.getByRole('button',{name:'Ask the shopkeeper the way'})).toBeHidden();
   await expect(page.locator('#ask-panel')).toBeHidden({timeout:5000});
   await expect(page.getByRole('button',{name:'Get a hint'})).toBeEnabled();
 });

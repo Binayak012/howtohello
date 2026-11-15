@@ -4,13 +4,20 @@ import { fileURLToPath } from 'node:url';
 // `npm run dev` runs the AI market neighbors (api/shopkeeper.ts) the same way Vercel does after deploying.
 function shopkeeperApi(server: ViteDevServer) {
   const env = loadEnv(server.config.mode, fileURLToPath(new URL('..', import.meta.url)), '');
-  for (const key of ['OPENAI_API_KEY', 'OPENAI_MODEL']) if (env[key] && !process.env[key]) process.env[key] = env[key];
-  server.middlewares.use('/api/shopkeeper', async (req, res) => {
+  for (const key of ['OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_TTS_MODEL']) if (env[key] && !process.env[key]) process.env[key] = env[key];
+  // Each file in api/ answers at /api/<name>, through its GET or POST export (like Vercel functions).
+  server.middlewares.use('/api', async (req, res, next) => {
+    const name = (req.url ?? '').slice(1).split('?')[0];
+    if (!/^[a-z-]+$/.test(name)) return next();
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(chunk as Buffer);
-    const { POST } = await server.ssrLoadModule(fileURLToPath(new URL('../api/shopkeeper.ts', import.meta.url)));
-    const response: Response = await POST(new Request('http://localhost/api/shopkeeper', { method: 'POST', headers: { 'content-type': 'application/json' }, body: Buffer.concat(chunks).toString() || '{}' }));
-    res.statusCode = response.status; res.setHeader('content-type', 'application/json'); res.end(await response.text());
+    const route = await server.ssrLoadModule(fileURLToPath(new URL(`../api/${name}.ts`, import.meta.url))).catch(() => undefined);
+    const handler = route?.[req.method ?? 'GET'];
+    if (!handler) return next();
+    const response: Response = await handler(new Request(`http://localhost/api${req.url}`, { method: req.method, headers: { 'content-type': 'application/json' }, body: req.method === 'POST' ? Buffer.concat(chunks).toString() || '{}' : undefined }));
+    res.statusCode = response.status;
+    response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.end(Buffer.from(await response.arrayBuffer()));
   });
 }
 

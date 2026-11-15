@@ -12,6 +12,7 @@ import './market-play.css';
 import './shop-guide.css';
 import { atCheckout, atShopDoor, baseBeats, facedRack, racks, rackFor, relativeTo, routeTo, start, step, turn, type Item } from './core';
 import { askNeighbor, neighborAiAvailable, type NeighborTurn } from './shopkeeper-ai';
+import { speakLine, stopSpeaking } from './neighbor-voice';
 import { EffectsController } from './effects';
 import { createAnswerFeedback } from './answer-feedback';
 import { MarketAudioController } from './market-audio';
@@ -30,7 +31,7 @@ app.innerHTML = `
   <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 05</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="tap-sounds" class="quiet tap-toggle" type="button"></button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
-    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong></div><aside class="shop-inventory" aria-label="Shopping inventory"><div class="eyebrow">YOUR INVENTORY</div><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></aside><div id="pips" class="pips"></div><button id="ask-shopkeeper" class="hint-button ask-button" aria-expanded="false" aria-controls="ask-panel" hidden><span aria-hidden="true">💬</span>Ask the way</button><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div>
+    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong></div><aside class="shop-inventory" aria-label="Shopping inventory"><div class="eyebrow">YOUR INVENTORY</div><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></aside><div id="pips" class="pips"></div><button id="ask-shopkeeper" class="ask-button" aria-label="Ask the shopkeeper the way" aria-expanded="false" aria-controls="ask-panel" hidden><span class="ask-icon" aria-hidden="true">💬</span><span class="ask-text"><strong>Ask the shopkeeper</strong><small lang="ne">… कहाँ छ?</small></span></button><p id="ask-callout" class="ask-callout" hidden><b>Lost?</b> Ask in Nepali: <span lang="ne">झोला कहाँ छ?</span> <span class="latin-guide">jhola kahaa chha?</span></p><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div>
     <section id="ask-panel" class="ask-panel" aria-label="Ask the shopkeeper the way" hidden><header><strong>Ask the shopkeeper</strong><button id="ask-close" class="ask-close" aria-label="Close">✕</button></header><p class="ask-how">Ask where something is: <b lang="ne">चिया कहाँ छ?</b> <span class="latin-guide">chiya kahaa chha?</span> <small>Where is the tea?</small></p><div id="ask-reply" class="ask-reply" aria-live="polite"></div><form id="ask-form" class="ask-form"><input id="ask-input" aria-label="Your question" placeholder="Type your question…" maxlength="120" autocomplete="off" spellcheck="false"><button type="submit">Ask</button></form><p id="ask-status" class="ask-status" role="status" aria-live="polite"></p></section>
     <div class="cue" aria-label="Direction cue"><span id="cue-item" class="cue-item"></span><div class="cue-body"><span class="cue-arrow" aria-hidden="true"><i id="cue-arrow">↑</i></span><div class="cue-word"><div id="target" class="target" lang="ne"></div><span id="pronunciation" class="latin-guide" lang="ne-Latn"></span></div></div><p id="caption" hidden></p></div>
     <div id="shelf-stock" class="shelf-stock" hidden></div>
@@ -194,6 +195,7 @@ function giveHint(auto: boolean) {
   } else {
     say(opener, `Next move: ${next ? moveText[next] : 'follow the gold marker'}.${hintLevel >= 3 && phase === 'shop' ? ' The shelf you need has a gold outline.' : ''}`);
   }
+  if (neighborAiAvailable() && phase !== 'practice' && next !== 'take') el('hint').textContent += ' Or ask the shopkeeper 💬.';
   render(); pulseCue();
 }
 
@@ -293,6 +295,14 @@ function answerQuiz(key: Move) {
 const askPhases: Phase[] = ['shop', 'checkout', 'collect', 'exit'];
 const askHistory: NeighborTurn[] = [];
 let askMisses = 0;
+let askIntroduced = false;
+let askCalloutTimer: ReturnType<typeof setTimeout> | undefined;
+/** The first time shopping starts, point at the shopkeeper so learners know they can ask. */
+function introduceAsk() {
+  if (askIntroduced || !neighborAiAvailable()) return;
+  askIntroduced = true; el('ask-callout').hidden = false;
+  clearTimeout(askCalloutTimer); askCalloutTimer = setTimeout(() => { el('ask-callout').hidden = true; }, 15000);
+}
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 function shopFacts() {
   const places: Record<string, string[]> = {};
@@ -303,6 +313,7 @@ function shopFacts() {
   return { places, want, facing };
 }
 function setAskOpen(open: boolean) {
+  if (open) { el('ask-callout').hidden = true; clearTimeout(askCalloutTimer); }
   el('ask-panel').hidden = !open; el('ask-shopkeeper').setAttribute('aria-expanded', String(open));
   if (open) (el('ask-input') as HTMLInputElement).focus(); else focusScene();
 }
@@ -318,8 +329,11 @@ async function askTheWay(event: SubmitEvent) {
     askHistory.push({ role: 'learner', text: message }, { role: 'neighbor', text: reply.nepali }); askHistory.splice(0, Math.max(0, askHistory.length - 8));
     if (!reply.success) askMisses++;
     scene?.greetShopkeeper(); effects.shopkeeperReaction();
-    el('ask-reply').innerHTML = `<p class="ask-you">${escapeHtml(message)}</p><div class="ask-answer" data-success="${reply.success}"><strong lang="ne">${escapeHtml(reply.nepali)}</strong>${reply.roman ? `<span class="latin-guide">${escapeHtml(reply.roman)}</span>` : ''}${reply.english ? `<small>${escapeHtml(reply.english)}</small>` : ''}${reply.tip ? `<p class="ask-tip"><span aria-hidden="true">💡</span> ${escapeHtml(reply.tip)}</p>` : ''}</div>`;
+    el('ask-reply').innerHTML = `<p class="ask-you">${escapeHtml(message)}</p><div class="ask-answer" data-success="${reply.success}"><strong lang="ne">${escapeHtml(reply.nepali)} <button type="button" class="line-replay" aria-label="Hear it again" title="Hear it again">🔊</button></strong>${reply.roman ? `<span class="latin-guide">${escapeHtml(reply.roman)}</span>` : ''}${reply.english ? `<small>${escapeHtml(reply.english)}</small>` : ''}${reply.tip ? `<p class="ask-tip"><span aria-hidden="true">💡</span> ${escapeHtml(reply.tip)}</p>` : ''}</div>`;
     el('ask-status').textContent = ''; input.value = '';
+    // The shopkeeper says it out loud (the radio dips while they talk); 🔊 plays it again.
+    const speak = () => speakLine('shop', reply.nepali, { start: () => radio.duck(), end: () => radio.restoreDuck() });
+    speak(); el('ask-reply').querySelector<HTMLButtonElement>('.line-replay')!.onclick = speak;
   } catch {
     if (asked !== run) return;
     el('ask-status').textContent = neighborAiAvailable() ? 'The shopkeeper didn’t hear you. Try again, or tap Hint.' : 'Asking isn’t set up here yet. Tap Hint for help.';
@@ -389,7 +403,7 @@ function render() {
   const inactive = busy || ['story', 'learn', 'scanning', 'departing', 'complete', 'market'].includes(phase);
   document.querySelectorAll<HTMLButtonElement>('[data-action], #help').forEach(button => button.disabled = inactive);
   const canAsk = neighborAiAvailable() && askPhases.includes(phase);
-  el('ask-shopkeeper').hidden = !canAsk; if (!canAsk && !el('ask-panel').hidden) { el('ask-panel').hidden = true; el('ask-shopkeeper').setAttribute('aria-expanded', 'false'); }
+  el('ask-shopkeeper').hidden = !canAsk; if (!canAsk) el('ask-callout').hidden = true; if (!canAsk && !el('ask-panel').hidden) { el('ask-panel').hidden = true; el('ask-shopkeeper').setAttribute('aria-expanded', 'false'); }
   const labels: Partial<Record<Phase, string>> = { checkout: 'Place items', scanning: 'Scanning…', collect: 'Pick up bag', exit: 'Bag packed ✓', complete: 'Done ✓' };
   const label = labels[phase] ?? 'Take 1';
   el('interact').innerHTML = `${label}<small>SPACE</small>`;
@@ -457,7 +471,7 @@ function act(action: string, rackId?: string, unitId?: string) {
     busy = true; render(); say(`✓ ${word.text} · ${word.en.split(' / ')[0].toLowerCase()}`, key === 'backward' ? 'You stepped back without turning. All four words tried!' : 'That’s it. On to the next word.');
     advanceTimer = setTimeout(() => {
       busy = false; misses = 0; helped = false;
-      if (practiceIndex === 3) { phase = 'shop'; say('Now for your first errand.', `${capital(theItem(baseBeats[0].item))} ${isAre(baseBeats[0].item)} ${wordsFor(relativeTo(player, rackFor(baseBeats[0]).col, rackFor(baseBeats[0]).row).ways).where}. The arrow card always points to the next thing on your list.`); }
+      if (practiceIndex === 3) { phase = 'shop'; introduceAsk(); say('Now for your first errand.', `${capital(theItem(baseBeats[0].item))} ${isAre(baseBeats[0].item)} ${wordsFor(relativeTo(player, rackFor(baseBeats[0]).col, rackFor(baseBeats[0]).row).ways).where}. The arrow card always points to the next thing on your list.`); }
       else { practiceIndex++; say('Your next word.', 'Do what it says.'); }
       armStuck(); render(); pulseCue();
     }, 650);
@@ -645,7 +659,7 @@ function restart() {
   if (scene) scene.market.onBicyclePass = undefined;
   effects.useMarketFootsteps(false);
   effects.cancel();
-  askHistory.length = 0; askMisses = 0; el('ask-reply').replaceChildren(); el('ask-status').textContent = ''; el('ask-panel').hidden = true;
+  stopSpeaking(); askHistory.length = 0; askMisses = 0; askIntroduced = false; clearTimeout(askCalloutTimer); el('ask-callout').hidden = true; el('ask-reply').replaceChildren(); el('ask-status').textContent = ''; el('ask-panel').hidden = true;
   phase = 'story'; player = start(); practiceIndex = 0; index = 0; misses = 0; helped = false; busy = false; hintLevel = 0; stock = createStock(); outcomes = [];
   scene?.resetStock(); scene?.setBeacon(undefined); scene?.setPlayer(player, true);
   el('market-journey').hidden = true;

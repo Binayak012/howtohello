@@ -7,6 +7,7 @@ import type { EffectsController } from './effects';
 import { askNeighbor, neighborAiAvailable, type NeighborTurn, type NeighborReply } from './shopkeeper-ai';
 import type { MarketAudioController } from './market-audio';
 import { speakerIcon, type PronunciationId, type VoiceSpeakerId, type WordPronouncer } from './pronunciation';
+import { speakLine, stopSpeaking } from './neighbor-voice';
 import './market-words.css';
 
 /** Reply actions that speak a bundled Nepali clip when the learner taps them. */
@@ -84,6 +85,8 @@ export class MarketExplorer {
   /** AI neighbors: what was said with each neighbor, and how the learner is doing (to adapt the support). */
   private aiHistory=new Map<ActivityId,NeighborTurn[]>();
   private aiLine?:NeighborReply;
+  /** The neighbor's last spoken line, for 🔊 replay. */
+  private spoken?:{who:ActivityId;text:string};
   private mistakes=0;
   private hintsUsed=0;
 
@@ -218,6 +221,7 @@ export class MarketExplorer {
     if(button.dataset.track){this.tracked=button.dataset.track as ActivityId;this.markTracked();this.progressed();this.focusWorld();return;}
     const action=button.dataset.marketAction;
     if(action==='review'){this.review();return;}
+    if(action==='replay-line'){if(this.spoken){this.pronouncer.stop();speakLine(this.spoken.who,this.spoken.text);}return;}
     if(action==='peek'){this.showHint();return;}
     if(action==='hint-close'){this.hideHint();this.focusWorld();return;}
     if(action==='face-target'){const target=this.target();this.pose.yaw=Math.atan2(-(target.x-this.pose.x),-(target.z-this.pose.z));this.pose.pitch=0;this.scene?.setMarketPose(this.pose);this.progressed();this.focusWorld();return;}
@@ -238,7 +242,7 @@ export class MarketExplorer {
     if(action.startsWith('wrong')||action==='where-wrong')this.mistakes++;
     const spoken=replyPronunciation[action??''];
     // Player-selected replies always use the learner’s voice, never the NPC’s.
-    if(spoken)this.pronouncer.speak(spoken,{button,speaker:'player'});
+    if(spoken){stopSpeaking();this.pronouncer.speak(spoken,{button,speaker:'player'});}
     if(action==='greet'&&conversation.stage==='greet'){
       this.greeted.add(conversation.activity.id);this.scene?.market.react(conversation.activity.id,'greet',this.pose);
       this.toast('right','That’s right! <b lang="ne">नमस्ते</b> means hello.');
@@ -288,6 +292,8 @@ export class MarketExplorer {
       if(this.conversation!==conversation||conversation.stage!==stage)return;
       history.push({role:'learner',text:message},{role:'neighbor',text:reply.nepali});this.aiHistory.set(activity.id,history.slice(-8));
       this.aiLine=reply;this.progressed();
+      // The neighbor says it out loud, in their own voice.
+      this.spoken={who:activity.id,text:reply.nepali};this.pronouncer.stop();speakLine(activity.id,reply.nepali);
       if(reply.success){
         const action={greet:'greet',where:'where-right',brief:'start-task',thanks:'thanks',done:'leave'}[stage];
         const line=`<b lang="ne">${esc(reply.nepali)}</b> <i>${esc(reply.english)}</i>`;
@@ -377,7 +383,7 @@ export class MarketExplorer {
     }
     // The AI neighbor's latest answer, when the learner spoke in their own words.
     const said=this.aiLine;this.aiLine=undefined;
-    const aiLine=said?`<div class="ai-line" data-success="${said.success}"><strong lang="ne">${esc(said.nepali)}</strong>${said.roman?`<span class="latin-guide">${esc(said.roman)}</span>`:''}${said.english?`<small>${esc(said.english)}</small>`:''}${said.tip?`<p class="ai-tip"><span aria-hidden="true">💡</span> ${esc(said.tip)}</p>`:''}</div>`:'';
+    const aiLine=said?`<div class="ai-line" data-success="${said.success}"><strong lang="ne">${esc(said.nepali)} <button type="button" class="line-replay" data-market-action="replay-line" aria-label="Hear it again" title="Hear it again">🔊</button></strong>${said.roman?`<span class="latin-guide">${esc(said.roman)}</span>`:''}${said.english?`<small>${esc(said.english)}</small>`:''}${said.tip?`<p class="ai-tip"><span aria-hidden="true">💡</span> ${esc(said.tip)}</p>`:''}</div>`:'';
     const talk=neighborAiAvailable()?`<form class="ai-talk"><div class="ai-field"><span aria-hidden="true">💬</span><input aria-label="Or say it in your own words" placeholder="…or type it in Nepali" maxlength="120" autocomplete="off" spellcheck="false"><button type="submit" aria-label="Say it">Say</button></div><p class="ai-status" role="status" aria-live="polite"></p></form>`:'';
     content+=`</div>${aiLine}<p class="bubble-task">${task}</p><div class="market-replies">${replies}</div>${talk}<p class="bubble-react" role="status" aria-live="polite"></p>`;
     this.dialogue.innerHTML=content;this.dialogue.querySelector<HTMLElement>('#market-dialogue-title')!.focus({preventScroll:true});
@@ -631,7 +637,7 @@ export class MarketExplorer {
     this.focusWorld();
   }
   dispose(){
-    cancelAnimationFrame(this.raf);this.clearKeys();clearTimeout(this.peekTimer);clearTimeout(this.hintTimer);this.pronouncer.stop();
+    cancelAnimationFrame(this.raf);this.clearKeys();stopSpeaking();clearTimeout(this.peekTimer);clearTimeout(this.hintTimer);this.pronouncer.stop();
     this.marketAudio.setDialogueBusy(false);this.marketAudio.setActive(false);
     window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.clearKeys);document.removeEventListener('visibilitychange',this.clearKeys);
     this.host.removeEventListener('click',this.click);this.host.removeEventListener('submit',this.submitSay);this.host.removeEventListener('pointerdown',this.touchDown);this.host.removeEventListener('pointerup',this.touchUp);this.host.removeEventListener('pointercancel',this.touchUp);this.host.removeEventListener('lostpointercapture',this.touchUp);

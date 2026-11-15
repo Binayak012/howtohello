@@ -27,6 +27,8 @@ test('learners can greet Maya in their own words; the AI neighbor decides when i
       ?{nepali:'नमस्ते! स्वागत छ।',roman:'namaste! swaagat chha.',english:'Hello! Welcome.',tip:'',success:true}
       :{nepali:'हजुर?',roman:'hajur?',english:'Pardon?',tip:'Try saying hello in Nepali: namaste.',success:false}});
   });
+  const spoken:string[]=[];
+  await page.route('**/api/speak**',route=>{spoken.push(route.request().url());return route.fulfill({status:503,json:{error:'not-configured'}});});
   await page.goto('/?level=market&ai');
   await expect(page.locator('#market-roam')).toBeVisible({timeout:15000});
   await walkTo(page,1.2,10.5);await walkTo(page,11.2,10.5);await walkTo(page,11.2,7.8);
@@ -39,6 +41,9 @@ test('learners can greet Maya in their own words; the AI neighbor decides when i
   await expect(page.locator('.ai-line')).toContainText('हजुर?');
   await expect(page.locator('.ai-tip')).toContainText('namaste');
   await expect(page.locator('.market-dialogue')).toHaveAttribute('data-stage','greet');
+  // Maya says her reply out loud in her own voice.
+  await expect.poll(()=>spoken.length).toBe(1);
+  expect(new URL(spoken[0]).searchParams.get('who')).toBe('fruit');
   await page.screenshot({path:'test-results/market-ai-tip.png'});
 
   // Typing namaste counts as greeting her: the conversation moves on exactly like tapping नमस्ते.

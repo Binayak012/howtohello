@@ -45,7 +45,7 @@ const count = (value: unknown) => Math.max(0, Math.min(20, Math.floor(Number(val
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
 export async function POST(request: Request): Promise<Response> {
-  const key = env.OPENAI_API_KEY;
+  const key = env.OPENAI_API_KEY?.trim(); // Pasted values often carry a stray space or line break.
   if (!key) return json({ error: 'not-configured' }, 503);
   let input: Record<string, unknown>;
   try { input = await request.json() as Record<string, unknown>; } catch { return json({ error: 'bad-request' }, 400); }
@@ -93,10 +93,13 @@ export async function POST(request: Request): Promise<Response> {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.OPENAI_MODEL || 'gpt-4o-mini', messages, response_format: { type: 'json_object' }, max_completion_tokens: 300 }),
+      body: JSON.stringify({ model: env.OPENAI_MODEL?.trim() || 'gpt-4o-mini', messages, response_format: { type: 'json_object' }, max_completion_tokens: 300 }),
       signal: AbortSignal.timeout(15000),
     });
-    if (!response.ok) return json({ error: 'ai-unavailable', status: response.status }, 502);
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({})) as { error?: { message?: string; code?: string } };
+      return json({ error: 'ai-unavailable', status: response.status, reason: detail.error?.code ?? detail.error?.message?.slice(0, 200) }, 502);
+    }
     const data = await response.json() as { choices?: { message?: { content?: string } }[] };
     const reply = JSON.parse(data.choices?.[0]?.message?.content ?? '{}') as Record<string, unknown>;
     const nepali = clean(reply.nepali, 200);

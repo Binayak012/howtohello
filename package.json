@@ -9,7 +9,7 @@
     "build": "npm --prefix website run build",
     "build:game": "tsc --noEmit && vite build",
     "preview": "npm --prefix website run preview --",
-    "test": "node --experimental-strip-types --test tests/cloud.test.ts tests/core.test.ts tests/shopkeeper-api.test.ts tests/market-world.test.ts tests/arrival-state.test.ts tests/unpack-state.test.ts tests/counting-state.test.ts website/tests/progression.test.ts website/tests/unit-unlock.test.ts",
+    "test": "node --experimental-strip-types --test tests/cloud.test.ts tests/core.test.ts tests/shopkeeper-api.test.ts tests/speak-api.test.ts tests/market-world.test.ts tests/arrival-state.test.ts tests/unpack-state.test.ts tests/counting-state.test.ts website/tests/progression.test.ts website/tests/unit-unlock.test.ts",
     "test:browser": "playwright test",
     "test:website": "playwright test --config playwright.website.config.mjs"
   },
