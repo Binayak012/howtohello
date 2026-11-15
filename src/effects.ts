@@ -130,6 +130,8 @@ export class EffectsController {
     void this.play('tap', 0.055, 0, 0.09, 1, true);
   }
 
+  get soundsEnabled() { return this.tapEnabled; }
+
   setWalking(walking: boolean, now = performance.now(), interval = 520) {
     if (!walking || !this.active || this.hidden || this.disposed) {
       if (this.walking) this.stopEffect('footstep');

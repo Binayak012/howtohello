@@ -1,3 +1,5 @@
+import { playMistakeTone } from '../../src/answer-feedback';
+
 type CelebrationKind = 'letter' | 'complete' | 'mistake';
 
 export function setupTraceCelebration(root: HTMLElement, enabled = true) {
@@ -15,8 +17,7 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   let currentAudio: HTMLAudioElement | null = null;
   let pendingAudio: CelebrationKind | null = null;
   let feedbackContext: AudioContext | null = null;
-  let mistakeMaster: GainNode | null = null;
-  let mistakeVoices: OscillatorNode[] = [];
+  let stopMistakeTone = () => {};
   let pencilSource: MediaElementAudioSourceNode | null = null;
   let pencilGain: GainNode | null = null;
   let pencilIdleTimer: number | undefined;
@@ -41,13 +42,8 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
   }
 
   function stopMistake() {
-    if (!feedbackContext || !mistakeMaster) return;
-    const now = feedbackContext.currentTime;
-    mistakeMaster.gain.cancelScheduledValues(now);
-    mistakeMaster.gain.setValueAtTime(0, now);
-    mistakeVoices.forEach(voice => { try { voice.stop(now); } catch { /* Already ended. */ } });
-    mistakeVoices = [];
-    mistakeMaster = null;
+    stopMistakeTone();
+    stopMistakeTone = () => {};
   }
 
   function stopPencil() {
@@ -74,43 +70,7 @@ export function setupTraceCelebration(root: HTMLElement, enabled = true) {
 
   function playMistake() {
     const audioContext = context();
-    if (!audioContext) return;
-    const master = audioContext.createGain();
-    const filter = audioContext.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 900;
-    filter.Q.value = .45;
-    master.gain.value = .12;
-    filter.connect(master);
-    master.connect(audioContext.destination);
-    mistakeMaster = master;
-    const start = audioContext.currentTime + .012;
-    const wave = audioContext.createPeriodicWave(
-      new Float32Array([0, 1, .16, .04]),
-      new Float32Array(4),
-      { disableNormalization: false },
-    );
-    [[329.63, 0, .29], [277.18, .18, .30]].forEach(([frequency, offset, duration]) => {
-      const voice = audioContext.createOscillator();
-      const envelope = audioContext.createGain();
-      voice.setPeriodicWave(wave);
-      voice.frequency.value = frequency;
-      envelope.gain.setValueAtTime(0, start + offset);
-      envelope.gain.linearRampToValueAtTime(.32, start + offset + .028);
-      envelope.gain.exponentialRampToValueAtTime(.0001, start + offset + duration);
-      voice.connect(envelope);
-      envelope.connect(filter);
-      voice.start(start + offset);
-      voice.stop(start + offset + duration + .02);
-      mistakeVoices.push(voice);
-    });
-    void audioContext.resume().catch(() => { stopMistake(); });
-    later(() => {
-      if (mistakeMaster === master) {
-        mistakeMaster = null;
-        mistakeVoices = [];
-      }
-    }, 540);
+    if (audioContext) stopMistakeTone = playMistakeTone(audioContext);
   }
 
   function pencilMoved(distance: number) {

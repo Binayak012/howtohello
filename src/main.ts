@@ -1,5 +1,6 @@
 import { completedLevels, isUnlocked, journey, type JourneyLevel } from './progression';
 import { mountDemoSkip } from './demo-skip';
+import { mountLessonSettings } from './lesson-settings';
 import './tokens.css';
 import { canAccessLesson } from './tracing-progress';
 
@@ -38,6 +39,8 @@ if(!level||level.id==='moving-in'){
 }else{
   await import('./shop-game');
 }
+
+mountLessonSettings(document.querySelector<HTMLElement>('#app')!);
 
 // Reveal the world and UI separately so objects do not appear all at once.
 if (import.meta.env.BASE_URL === '/game/' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

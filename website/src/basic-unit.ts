@@ -7,6 +7,7 @@ import { evaluateTrace } from '../../src/unit-unlock';
 import { tracedLetters, saveTracedLetter, writingSets, canPracticeSet, type WritingSetId } from '../../src/tracing-progress';
 import { completeLevel, levelHref, nextLevel } from '../../src/progression';
 import { mountDemoSkip } from '../../src/demo-skip';
+import { mountLessonSettings } from '../../src/lesson-settings';
 
 // Temporary hackathon shortcut; set VITE_DEMO_SKIP_TRACING=false to hide it.
 const demoSkipEnabled = import.meta.env.VITE_DEMO_SKIP_TRACING !== 'false';
@@ -15,6 +16,7 @@ const demoSkipButton = demoSkipEnabled ? '<button type="button" class="demo-trac
 /** Chapter 4, Your First Letters: trace five vowels after Counting with Lila, then continue to the shop. */
 export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void {
   mountDemoSkip(true, 'letters');
+  const cleanupSettings = mountLessonSettings(app);
   const stores: Storage[] = [];
   try { stores.push(localStorage); } catch {}
   try { stores.push(sessionStorage); } catch {}
@@ -187,5 +189,5 @@ export function renderBasicUnit(app: HTMLDivElement, brand: string): () => void 
     cleanupDrawing = () => { pronunciation.dispose(); tutorial.onclose = null; tutorial.close(); guide.dispose(); endStroke(); ink.onpointerdown = null; ink.onpointermove = null; ink.onpointerup = null; ink.onpointercancel = null; ink.onlostpointercapture = null; };
   }
   door();
-  return () => { window.clearTimeout(finishTimer); document.body.classList.remove('is-tracing-screen'); cleanupCelebration(); cleanupDrawing(); };
+  return () => { cleanupSettings(); window.clearTimeout(finishTimer); document.body.classList.remove('is-tracing-screen'); cleanupCelebration(); cleanupDrawing(); };
 }

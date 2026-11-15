@@ -12,6 +12,7 @@ import './market-play.css';
 import './shop-guide.css';
 import { atCheckout, atShopDoor, baseBeats, facedRack, rackFor, relativeTo, routeTo, start, step, turn, type Item } from './core';
 import { EffectsController } from './effects';
+import { createAnswerFeedback } from './answer-feedback';
 import { pack } from './pack';
 import { speakerIcon, WordPronouncer } from './pronunciation';
 import { RadioController, type RadioState } from './radio';
@@ -27,9 +28,9 @@ app.innerHTML = `
   <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 05</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="tap-sounds" class="quiet tap-toggle" type="button"></button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
-    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div>
+    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong></div><aside class="shop-inventory" aria-label="Shopping inventory"><div class="eyebrow">YOUR INVENTORY</div><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></aside><div id="pips" class="pips"></div><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div>
     <div class="cue" aria-label="Direction cue"><span id="cue-item" class="cue-item"></span><div class="cue-body"><span class="cue-arrow" aria-hidden="true"><i id="cue-arrow">↑</i></span><div class="cue-word"><div id="target" class="target" lang="ne"></div><span id="pronunciation" class="latin-guide" lang="ne-Latn"></span></div></div><p id="caption" hidden></p></div>
-    <div class="scene-bottom"><div class="compass"><strong id="facing">N</strong><span>↑</span></div><div id="position" class="position"></div></div><div id="shelf-stock" class="shelf-stock" hidden></div>
+    <div id="shelf-stock" class="shelf-stock" hidden></div>
     <div id="checkout-status" class="checkout-status" role="status" aria-live="polite" hidden></div>
     <section id="welcome" class="welcome" role="dialog" aria-modal="false" aria-labelledby="welcome-title"><div id="intro-card" class="welcome-card"></div></section>
     <div id="market-journey" class="market-journey" hidden><div class="market-letterbox top"></div><div class="market-letterbox bottom"></div><div class="market-caption" role="status"><span id="journey-eyebrow">LEAVING THE SHOP</span><h2 id="journey-title">“धन्यवाद! See you soon.”</h2><p id="journey-line">The shopkeeper waves as the door swings open.</p></div><button id="skip-journey" type="button">Continue <span aria-hidden="true">↗</span></button></div>
@@ -38,8 +39,8 @@ app.innerHTML = `
     <section id="numbers-lesson" class="numbers-lesson" role="dialog" aria-modal="false" aria-labelledby="numbers-title" hidden></section>
     <section id="market-roam" class="market-exploration" aria-label="Explore the market" hidden></section>
   </section>
-  <div class="playbar"><div class="feedback"><span>✦</span><div><strong id="feedback" role="status" aria-live="polite"></strong><small id="hint"></small></div></div><div class="controls"><button data-action="left" class="turn-control" aria-label="Turn left"><span class="ctl-arrow">↶</span><b lang="ne">बायाँ</b><small>LEFT</small></button><div class="step-controls"><button data-action="forward" aria-label="Step forward"><span class="ctl-arrow">↑</span><b lang="ne">अगाडि</b></button><button data-action="backward" aria-label="Step backward"><span class="ctl-arrow">↓</span><b lang="ne">पछाडि</b></button></div><button data-action="right" class="turn-control" aria-label="Turn right"><span class="ctl-arrow">↷</span><b lang="ne">दायाँ</b><small>RIGHT</small></button><button id="interact" data-action="take" class="primary">Take 1<small>SPACE</small></button></div></div>
-  <footer><span>⌨ &nbsp; ← → turn · ↑ ↓ move · Space interact</span><span>Four new words. One little adventure.</span></footer></main>`;
+  <div class="playbar"><div class="feedback"><span>✦</span><div><strong id="feedback" role="status" aria-live="polite"></strong><small id="hint"></small></div></div><div class="controls"><button data-action="left" class="turn-control" aria-label="Turn left"><span class="ctl-arrow">↶</span><b lang="ne">बायाँ</b><small>LEFT</small></button><div class="step-controls"><button data-action="forward" aria-label="Step forward"><span class="ctl-arrow">↑</span><b lang="ne">अगाडि</b></button><button data-action="backward" aria-label="Step backward"><span class="ctl-arrow">↓</span><b lang="ne">पछाडि</b></button></div><button data-action="right" class="turn-control" aria-label="Turn right"><span class="ctl-arrow">↷</span><b lang="ne">दायाँ</b><small>RIGHT</small></button><button id="interact" data-action="take" class="interaction-action">Take 1<small>SPACE</small></button></div></div>
+  </main>`;
 
 const el = (id: string) => document.getElementById(id)!;
 let phase: Phase = 'story', player = start(), practiceIndex = 0, index = 0, misses = 0, helped = false, busy = false;
@@ -55,6 +56,22 @@ let readingHelp = true;
 let nepaliScript = true;
 /** 0 = no help yet; 1 = what the word means; 2 = which button to press; 3 = gold outline on the shelf. */
 let hintLevel = 0;
+let hintVisible = false;
+let suggestionTimer: ReturnType<typeof setTimeout> | undefined;
+function clearSuggestion() {
+  clearTimeout(suggestionTimer);
+  document.querySelectorAll('.controls .is-suggested').forEach(button => button.classList.remove('is-suggested'));
+}
+function flashSuggestion() {
+  clearSuggestion();
+  const next = nextMove();
+  const button = document.querySelector<HTMLElement>(`.controls [data-action="${next}"]`);
+  if (!button || button.hidden) return;
+  // Restart the brief flash even when the learner repeats the same mistake.
+  void button.offsetWidth;
+  button.classList.add('is-suggested');
+  suggestionTimer = setTimeout(clearSuggestion, 1500);
+}
 let quiz: Move[] = [], quizIndex = 0, quizMisses = 0;
 const tried = new Set<Move>();
 export let scene: ShopScene | undefined;
@@ -66,6 +83,7 @@ try { scene = new ShopScene(el('scene'), (id, unitId) => act('take', id, unitId)
 catch { el('scene').innerHTML = '<div class="scene-fallback">Your shop map<div id="map"></div><p>Use the controls to explore. Bright tiles are shelves.</p></div>'; }
 export const radio = new RadioController(scene?.camera, scene?.radioAnchor);
 export const effects = new EffectsController(radio.listener, scene?.keeper);
+const answerFeedback = createAnswerFeedback(() => effects.soundsEnabled);
 const pronouncer = new WordPronouncer({
   onPlayingChange: playing => effects.setSpeechBusy(playing),
   duckRadio: () => radio.duck(),
@@ -97,12 +115,10 @@ function pulseCue() {
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelector('.cue')?.animate([{ scale: '1.08' }, { scale: '1' }], { duration: 450 });
 }
 function resetIdle() { clearTimeout(idleTimer); if (!['story', 'learn', 'scanning', 'complete', 'departing', 'market'].includes(phase)) idleTimer = setTimeout(pulseCue, 20000); }
-/** Start the "are you stuck?" clock again after real progress. */
+/** Clear the requested hint after real progress; hints never open automatically. */
 function armStuck(resetLevel = true) {
   clearTimeout(stuckTimer);
-  if (resetLevel) hintLevel = 0;
-  if (!['practice', 'shop', 'checkout', 'collect', 'exit'].includes(phase)) return;
-  stuckTimer = setTimeout(() => { if (!busy) giveHint(true); armStuck(false); }, hintLevel === 0 ? 15000 : 12000);
+  if (resetLevel) { hintLevel = 0; hintVisible = false; }
 }
 
 /** The direction card: where the thing you need is, from where you stand right now. */
@@ -146,24 +162,27 @@ function refreshHint() {
   else if (next) say('Keep going.', `Next move: ${moveText[next]}.`);
 }
 const moveText: Record<string, string> = {
-  left: `turn बायाँ (left) · press ←`, right: `turn दायाँ (right) · press →`,
-  forward: `step अगाडि (forward) · press ↑`, backward: `step पछाडि (backward) · press ↓`,
+  left: `turn बायाँ (baaya · left) · press ←`, right: `turn दायाँ (daaya · right) · press →`,
+  forward: `step अगाडि (agadi · forward) · press ↑`, backward: `step पछाडि (pachhadi · backward) · press ↓`,
 };
 function giveHint(auto: boolean) {
+  if (auto) return;
   if (busy || !['practice', 'shop', 'checkout', 'collect', 'exit'].includes(phase)) return;
+  hintVisible = true;
   if (!auto) helped = true;
   hintLevel = Math.min(3, hintLevel + 1);
   const info = guide(), next = nextMove();
   const opener = auto ? 'Need a hand?' : 'A little nudge.';
   if (phase === 'practice') {
     const word = pack.directions[practice[practiceIndex]];
-    say(opener, hintLevel === 1 ? `${word.text} (${word.roman}) means “${word.en.toLowerCase()}”. ${word.lesson}` : `Tap the glowing ${word.text} button, or press ${word.key}.`);
+    say(opener, hintLevel === 1 ? `${word.text} (${word.roman}) means “${word.en.toLowerCase()}”. ${word.lesson}` : `Tap the glowing ${word.text} (${word.roman}) button, or press ${word.key}.`);
   } else if (next === 'take') {
     say(opener, phase === 'shop' ? `${info?.english ?? ''} Press Space or tap Take 1.` : 'You’re at the counter. Tap the glowing button or press Space.');
   } else if (hintLevel === 1 && info) {
-    say(opener, `${info.english}: ${wordsFor(info.ways).text}. Look for the gold marker.`);
+    const words = wordsFor(info.ways);
+    say(opener, `${info.english}: ${words.text} (${words.roman}). Look for the gold marker.`);
   } else {
-    say(opener, `Next move: ${next ? moveText[next] : 'follow the arrow card'}.${hintLevel >= 3 && phase === 'shop' ? ' The shelf you need has a gold outline.' : ''}`);
+    say(opener, `Next move: ${next ? moveText[next] : 'follow the gold marker'}.${hintLevel >= 3 && phase === 'shop' ? ' The shelf you need has a gold outline.' : ''}`);
   }
   render(); pulseCue();
 }
@@ -178,7 +197,7 @@ function showStory() {
   pronouncer.stop();
   el('welcome').hidden = false;
   el('intro-card').classList.remove('word-lesson');
-  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 05 · THE LITTLE SHOP</div><div class="story-illustration" aria-hidden="true"><span>⌂</span><i>✦</i></div><h1 id="welcome-title" tabindex="-1">Your first<br>little errand.</h1><p>The corner shop has just opened, and you have a short shopping list.<br>Every shelf sells something different, so you’ll need to know which way to go.</p><blockquote>“Namaste! Find what you need, bring it to the counter, and I’ll pack it for you.”<small>THE SHOPKEEPER</small></blockquote><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper. ${pronouncer.hearLabel('नमस्ते')}" aria-pressed="false">${speakerIcon}<strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><div class="shopping-list">${baseBeats.map(beat => `<span>${pack.items[beat.item]}</span>`).join('')}</div><p class="instructions">Four Nepali words will tell you where things are.<br>Learn them, check them, then go shopping.</p><button id="begin" class="primary" disabled>Learn the four words ↗</button><small class="welcome-keys">Say hello → learn → quick check → shop → the market</small>`;
+  el('intro-card').innerHTML = `<div class="eyebrow">CHAPTER 05 · THE LITTLE SHOP</div><h1 id="welcome-title" tabindex="-1">Your first little errand.</h1><p>Learn four direction words, then find your shopping and bring it to the counter.</p><button id="shop-greeting" class="shop-greeting" aria-label="Say namaste to the shopkeeper. ${pronouncer.hearLabel('नमस्ते')}" aria-pressed="false">${speakerIcon}<strong lang="ne">नमस्ते</strong><span><span class="latin-guide">namaste · </span>Hello<br>Greet the shopkeeper</span></button><button id="begin" class="primary" disabled>Learn the four words ↗</button>`;
   el('shop-greeting').onclick = () => {
     const greeting = el('shop-greeting');
     scene?.greetShopkeeper();
@@ -191,20 +210,12 @@ function showStory() {
   el('begin').onclick = showWords;
   el('welcome-title').focus({preventScroll:true});
 }
-function readingSwitches() {
-  return `<div class="reading-preference"><span class="reading-option"><span>ने &nbsp; Nepali script</span><button id="lesson-nepali-toggle" role="switch" aria-label="Nepali script" aria-checked="${nepaliScript}">${nepaliScript ? 'On' : 'Off'}</button></span><span class="reading-option"><span>Aa &nbsp; Latin-letter guides</span><button id="lesson-reading-toggle" role="switch" aria-label="Latin-letter guides" aria-checked="${readingHelp}">${readingHelp ? 'On' : 'Off'}</button></span></div>`;
-}
-function bindReadingSwitches() {
-  el('lesson-nepali-toggle').onclick = () => setNepaliScript(!nepaliScript);
-  el('lesson-reading-toggle').onclick = () => setReadingHelp(!readingHelp);
-}
 /** Step 1 of the lesson: try every word and watch "you" do it. */
 function showWords() {
   pronouncer.stop();
   phase = 'learn'; render(); tried.clear();
   el('intro-card').classList.add('word-lesson'); el('intro-card').dataset.step = 'explore';
-  el('intro-card').innerHTML = `<div class="lesson-steps" aria-label="Lesson steps"><span class="is-current">1 · Try each word</span><span>2 · Quick check</span><span>3 · In the shop</span></div><h1 id="welcome-title" tabindex="-1">Find your bearings.</h1><p class="script-intro">Tap each word to see the yellow “you” do it.<br>Say it out loud as you go.</p><div class="direction-map">${directionCards()}<div class="you-marker" aria-label="You, facing forward"><span>↑</span><small>YOU</small></div></div><div class="word-detail"><span class="detail-spark" aria-hidden="true">✦</span><p id="word-explanation" class="word-explanation" role="status">Start with any word.</p></div><button id="lesson-next" class="primary lesson-cta" disabled><span id="lesson-next-label">Try all four words · 0 / 4</span><span aria-hidden="true">↗</span></button>${readingSwitches()}`;
-  bindReadingSwitches();
+  el('intro-card').innerHTML = `<h1 id="welcome-title" tabindex="-1">Find your bearings.</h1><p class="script-intro">Tap each word to see the yellow “you” do it.<br>Say it out loud as you go.</p><div class="direction-map">${directionCards()}<div class="you-marker" aria-label="You, facing forward"><span>↑</span><small>YOU</small></div></div><div class="word-detail"><span class="detail-spark" aria-hidden="true">✦</span><p id="word-explanation" class="word-explanation" role="status">Start with any word.</p></div><button id="lesson-next" class="primary lesson-cta" disabled><span id="lesson-next-label">Try all four words · 0 / 4</span><span aria-hidden="true">↗</span></button>`;
   const select = (key: Move) => {
     const word = pack.directions[key];
     el('word-explanation').innerHTML = `<strong lang="ne">${word.text}</strong> <span class="latin-guide">${word.roman}</span> = <b>${word.en.toLowerCase()}</b>. ${word.lesson}`;
@@ -224,8 +235,7 @@ function showWords() {
 function showQuiz() {
   quiz = [...practice].sort(() => Math.random() - .5); quizIndex = 0; quizMisses = 0;
   el('intro-card').dataset.step = 'quiz'; delete el('intro-card').dataset.direction;
-  el('intro-card').innerHTML = `<div class="lesson-steps" aria-label="Lesson steps"><span class="is-done">1 · Try each word ✓</span><span class="is-current">2 · Quick check</span><span>3 · In the shop</span></div><h1 id="welcome-title" tabindex="-1">Which way?</h1><p class="script-intro">Read the word, then tap the arrow it means, or press that arrow key.</p><div class="quiz-word"><strong id="quiz-word" lang="ne"></strong><span id="quiz-roman" class="latin-guide"></span></div><div class="direction-map quiz-map">${practice.map(key => `<button class="direction-card direction-${key} quiz-card" data-answer="${key}" aria-label="${pack.directions[key].en.split(' / ')[0]}"><span class="quiz-arrow" aria-hidden="true">${pack.directions[key].symbol}</span></button>`).join('')}<div class="you-marker" aria-hidden="true"><span>↑</span><small>YOU</small></div></div><div class="quiz-score" aria-hidden="true">${quiz.map(() => '<i></i>').join('')}</div><p id="quiz-feedback" class="quiz-feedback" role="status" aria-live="polite"></p><button id="begin" class="primary lesson-cta" hidden><span>Let’s try it in the shop</span><span aria-hidden="true">↗</span></button>${readingSwitches()}`;
-  bindReadingSwitches();
+  el('intro-card').innerHTML = `<h1 id="welcome-title" tabindex="-1">Which way?</h1><p class="script-intro">Read the word, then tap the arrow it means, or press that arrow key.</p><div class="quiz-word"><strong id="quiz-word" lang="ne"></strong><span id="quiz-roman" class="latin-guide"></span></div><div class="direction-map quiz-map">${practice.map(key => `<button class="direction-card direction-${key} quiz-card" data-answer="${key}" aria-label="${pack.directions[key].en.split(' / ')[0]}"><span class="quiz-arrow" aria-hidden="true">${pack.directions[key].symbol}</span></button>`).join('')}<div class="you-marker" aria-hidden="true"><span>↑</span><small>YOU</small></div></div><div class="quiz-score" aria-hidden="true">${quiz.map(() => '<i></i>').join('')}</div><p id="quiz-feedback" class="quiz-feedback" role="status" aria-live="polite"></p><button id="begin" class="primary lesson-cta" hidden><span>Let’s try it in the shop</span><span aria-hidden="true">↗</span></button>`;
   document.querySelectorAll<HTMLButtonElement>('[data-answer]').forEach(button => button.onclick = () => answerQuiz(button.dataset.answer as Move));
   el('begin').onclick = () => {
     pronouncer.stop();
@@ -245,6 +255,7 @@ function answerQuiz(key: Move) {
   if (el('intro-card').dataset.step !== 'quiz' || quizIndex >= quiz.length || busy) return;
   const wanted = quiz[quizIndex], word = pack.directions[wanted], chosen = pack.directions[key];
   const button = document.querySelector<HTMLElement>(`[data-answer="${key}"]`);
+  answerFeedback.play(key === wanted);
   if (key !== wanted) {
     quizMisses++;
     el('quiz-feedback').innerHTML = `That way is <strong lang="ne">${chosen.text}</strong> (${chosen.en.split(' / ')[0].toLowerCase()}). Look again: <strong lang="ne">${word.text}</strong>?`;
@@ -280,8 +291,6 @@ function render() {
   const targetRack = phase === 'shop' ? rackFor(baseBeats[index]) : undefined;
   scene?.setHighlight(targetRack ? misses >= 3 || hintLevel >= 3 ? targetRack.id : facedRack(player)?.id : undefined);
   if (phase !== 'market') scene?.setBeacon(targetRack ? { x: targetRack.col - 4, y: 2.02, z: targetRack.row - 4 } : undefined);
-  el('facing').textContent = player.facing;
-  el('position').textContent = `Tile ${player.col}, ${player.row} · Facing ${player.facing}`;
   const teaching = phase === 'practice';
   const info = guide();
   const cue = document.querySelector<HTMLElement>('.cue')!;
@@ -300,7 +309,8 @@ function render() {
   app.dataset.readingHelp = String(readingHelp);
   app.dataset.nepaliScript = String(nepaliScript);
   el('caption').hidden = misses < 1 && hintLevel < 1;
-  cue.hidden = !info || (['checkout', 'collect'].includes(phase) && atCheckout(player));
+  cue.hidden = true;
+  document.querySelector<HTMLElement>('.feedback')!.hidden = !hintVisible;
   el('mission-label').textContent = teaching ? `GUIDED PRACTICE · ${practiceIndex + 1} / 4` : 'YOUR FIRST ERRAND';
   const beatItem = baseBeats[index]?.item;
   const objectives: Record<Phase, string> = {
@@ -312,6 +322,13 @@ function render() {
     exit: 'Take your packed shopping to the door', departing: 'A new day in the neighborhood', complete: 'Your first errand is complete!', market: 'Welcome to the morning market',
   };
   el('objective').textContent = objectives[phase];
+  const nextInstruction = nextMove();
+  if (nextInstruction && nextInstruction in pack.directions) {
+    const direction = nextInstruction as Move;
+    const word = pack.directions[direction];
+    el('objective').innerHTML = `${direction === 'left' || direction === 'right' ? 'Turn' : 'Move'} <span lang="ne">${word.text}</span><small class="latin-guide" lang="ne-Latn">${word.roman}</small>`;
+    el('mission-label').textContent = phase === 'shop' && beatItem ? `FIND ${pack.items[beatItem].toUpperCase()}` : phase === 'practice' ? `PRACTICE ${practiceIndex + 1} / 4` : phase === 'exit' ? 'GO TO THE DOOR' : 'GO TO THE COUNTER';
+  }
   const picked = stock.filter(unit => unit.taken);
   el('order').innerHTML = baseBeats.map((beat, i) => `<span class="order-item ${i < picked.length ? 'collected' : i === index && phase === 'shop' ? 'current' : ''}">${i < picked.length ? '✓ ' : ''}${pack.items[beat.item]}</span>`).join('');
   renderStock();
@@ -326,12 +343,9 @@ function render() {
   el('interact').innerHTML = `${label}<small>SPACE</small>`;
   el('interact').setAttribute('aria-label', phase === 'shop' ? 'Take one item' : label);
   (el('interact') as HTMLButtonElement).disabled = inactive || phase === 'practice' || phase === 'exit';
-  // Stronger hints light up the one control that moves you closer.
-  const suggested = hintLevel >= 2 || misses >= 2 ? nextMove() : undefined;
-  document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach(button => {
-    button.classList.toggle('is-suggested', !inactive && button.dataset.action === suggested);
-  });
-  el('interact').classList.toggle('is-ready', !inactive && (!!info?.ready || (['checkout', 'collect'].includes(phase) && atCheckout(player))));
+  const interactionReady = !inactive && (phase === 'shop' ? !!info?.ready : ['checkout', 'collect'].includes(phase) && atCheckout(player));
+  el('interact').hidden = !interactionReady;
+  el('interact').classList.toggle('is-ready', interactionReady);
   const map = document.getElementById('map');
   if (map) map.innerHTML = Array.from({ length: 81 }, (_, n) => { const col = n % 9, row = Math.floor(n / 9); const rack = racksAt(col, row); return `<span class="map-tile ${rack ? 'rack' : ''}" title="${rack ? pack.items[rack] : ''}">${player.col === col && player.row === row ? ({ N:'↑', E:'→', S:'↓', W:'←' }[player.facing]) : rack ? pack.items[rack][0] : col === 4 && row === 8 ? '⇩' : col === 0 || col === 8 || row === 0 || row === 8 ? '▪' : ''}</span>`; }).join('');
 }
@@ -363,6 +377,7 @@ function miss(text?: string) {
   } else say('Not that one.', text ?? (info ? `${info.english}: ${wordsFor(info.ways).text}.` : 'Follow the arrow card.'));
   if (misses >= 3) hintLevel = Math.max(hintLevel, 3);
   pulseCue(); render();
+  flashSuggestion();
 }
 function move(action: string) {
   if (action === 'left' || action === 'right') player = turn(player, action === 'left' ? -1 : 1);
@@ -379,6 +394,7 @@ function move(action: string) {
 }
 function act(action: string, rackId?: string, unitId?: string) {
   if (busy || ['story', 'learn', 'scanning', 'complete', 'market'].includes(phase)) return;
+  clearSuggestion();
   resetIdle();
   if (phase === 'practice') {
     const key = practice[practiceIndex], word = pack.directions[key];
@@ -396,9 +412,11 @@ function act(action: string, rackId?: string, unitId?: string) {
     return;
   }
   if (action !== 'take') {
-    if (!move(action)) return;
+    const expected = nextMove();
+    if (!move(action)) { render(); flashSuggestion(); return; }
     if (action === 'forward' || action === 'backward') effects.footstep();
     refreshHint(); render();
+    if (expected && action !== expected) flashSuggestion();
     if (phase === 'exit' && atShopDoor(player)) {
       // Let the final forward step reach the door before presenting the recap.
       busy = true; render();
@@ -543,14 +561,16 @@ function finish() {
   phase = 'complete'; busy = false; clearTimeout(idleTimer); clearTimeout(stuckTimer); render();
   effects.levelComplete();
   try { completeLevel(localStorage, 'little-shop'); } catch { /* Play works without storage. */ }
-  const mastered = outcomes.filter(outcome => !outcome.misses && !outcome.helped).length;
   const celebration = Array.from({ length: 16 }, (_, i) => `<i style="--angle:${i * 22.5}deg;--distance:${54 + i % 3 * 14}px;--delay:${i % 4 * 45}ms">${i % 3 ? '✦' : '●'}</i>`).join('');
   el('results').hidden = false;
-  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 05 · COMPLETE</div><h2 id="shop-complete-title" tabindex="-1">Your first errand. Done.</h2><p>${baseBeats.map(beat => pack.items[beat.item].toLowerCase()).join(', ').replace(/^./, letter => letter.toUpperCase())}: found with four Nepali words.</p><div class="recap-words">${practice.map(key => { const word = pack.directions[key]; return `<div><strong lang="ne">${word.text}</strong><span>${word.roman} · ${word.en}</span></div>`; }).join('')}</div><p>${mastered} first-try successes · ${outcomes.length - mastered} practiced with help</p><div class="next-chapter"><span class="eyebrow">UP NEXT · CHAPTER 06 · FINALE</span><strong>The Morning Market</strong><small>“धन्यवाद! The market is right outside. Your neighbors could use a hand.” · The shopkeeper</small></div><button id="next-level" class="primary">Step outside to the market <span aria-hidden="true">↗</span></button><button id="again" class="quiet">Play the shop again</button>${import.meta.env.BASE_URL === '/game/' ? '<a class="quiet map-return" href="/map/index.html">Back to your map ↗</a>' : ''}`;
+  el('results').innerHTML = `<div class="completion-celebration" aria-hidden="true"><div class="completion-sparks">${celebration}</div><div class="completion-medal"><span>✓</span></div></div><div class="eyebrow">CHAPTER 05 · COMPLETE</div><h2 id="shop-complete-title" tabindex="-1">Errand complete!</h2><p>Next up: The Morning Market.</p><button id="next-level" class="primary">Continue to the market <span aria-hidden="true">↗</span></button>${import.meta.env.BASE_URL === '/game/' ? '<a class="map-return" href="/map/index.html">Back to map</a>' : ''}`;
   el('next-level').onclick = beginDeparture;
-  el('again').onclick = restart; el('next-level').focus(); say('A little more at home.', 'When you’re ready, step outside. The market is waiting.');
+  el('next-level').focus(); say('A little more at home.', 'When you’re ready, step outside. The market is waiting.');
 }
 function restart() {
+  clearSuggestion();
+  hintVisible = false;
+  answerFeedback.stop();
   explorer?.dispose();explorer=undefined;numberLearned=false;
   numberLesson?.dispose(); numberLesson = undefined;
   run++; clearTimeout(advanceTimer); clearTimeout(idleTimer); clearTimeout(fallbackTimer); clearTimeout(stuckTimer);
@@ -614,7 +634,7 @@ window.addEventListener('keydown', event => {
     }
   }
 });
-window.addEventListener('pagehide', () => { pronouncer.dispose(); disposeTapControls(); effects.dispose(); radio.dispose(); }, { once: true });
+window.addEventListener('pagehide', () => { answerFeedback.dispose(); pronouncer.dispose(); disposeTapControls(); effects.dispose(); radio.dispose(); }, { once: true });
 
 restart();
 // Resume an unlocked market from the map without replaying the shop tutorial.

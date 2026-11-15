@@ -8,7 +8,8 @@ const css = `
 .demo-skip{position:fixed;left:6px;bottom:6px;z-index:9999;font:600 11px/1.3 system-ui,sans-serif;color:#2b2340}
 .demo-skip>button{width:26px;height:26px;border-radius:50%;border:1px solid #d9cdb5;background:#fffaf0;opacity:.6;cursor:pointer;font-size:12px;box-shadow:0 2px 6px #2b234020;padding:0}
 .demo-skip>button:hover,.demo-skip>button:focus-visible,.demo-skip[data-open=true]>button{opacity:1}
-.demo-skip nav{position:absolute;left:0;bottom:32px;width:220px;padding:8px;border-radius:14px;background:#fffaf0;border:1px solid #e6dcc6;box-shadow:0 12px 36px #2b234035}
+.demo-skip nav{display:block;position:absolute;left:0;bottom:32px;box-sizing:border-box;width:220px;max-width:calc(100vw - 12px);max-height:calc(100dvh - 44px);overflow:auto;padding:8px;border-radius:14px;background:#fffaf0;border:1px solid #e6dcc6;box-shadow:0 12px 36px #2b234035;font:600 11px/1.3 system-ui,sans-serif}
+.demo-skip nav[hidden]{display:none}
 .demo-skip nav p{margin:2px 6px 6px;font-size:9px;letter-spacing:.12em;color:#7a6f86}
 .demo-skip nav a{display:flex;gap:8px;padding:7px 8px;border-radius:9px;color:inherit;text-decoration:none}
 .demo-skip nav a:hover,.demo-skip nav a:focus-visible{background:#efe6d3;outline:none}

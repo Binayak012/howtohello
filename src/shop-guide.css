@@ -45,8 +45,8 @@
 .quiz-card{align-items:center}
 #app .quiz-card .quiz-arrow{font-size:40px;line-height:1;font-weight:700;color:var(--accent)}
 .quiz-card.is-right{border-color:var(--teal);background:#e1efe7}
-.quiz-score{display:flex;justify-content:center;gap:6px;margin:4px 0}
-.quiz-score i{width:10px;height:10px;border-radius:50%;background:var(--sunk)}
+.quiz-score{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:12px;margin:16px 0 18px}
+.quiz-score i{flex:0 0 10px;width:10px;height:10px;border-radius:50%;background:var(--sunk)}
 .quiz-score i.current{background:var(--marigold)}
 .quiz-score i.done{background:var(--teal)}
 .quiz-feedback{min-height:22px;font-size:12px;color:var(--muted);margin:6px 0 10px}
@@ -148,3 +148,81 @@
 .finale-pictures li>span[aria-hidden]{font-size:24px}
 .finale-pictures strong{font-size:19px!important}
 .market-arrival .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* Focus the shop introduction on its greeting and next action. */
+#app[data-phase=story] .welcome{padding:80px 16px 20px}
+#app[data-phase=story] .welcome-card{width:min(100%,470px);padding:28px;max-height:calc(100dvh - 100px);overflow:auto}
+#app[data-phase=story] .welcome h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:12px 0 16px}
+#app[data-phase=story] .welcome p{font-size:14px;line-height:1.5;margin:0 0 18px}
+#app[data-phase=story] .shop-greeting{margin:0 0 20px;padding:12px 16px}
+@media(max-height:520px){#app[data-phase=story] .welcome-card{padding:16px 24px}#app[data-phase=story] .welcome h1{font-size:26px;margin:8px 0}#app[data-phase=story] .welcome p{font-size:12px;margin-bottom:10px}#app[data-phase=story] .shop-greeting{margin-bottom:12px;padding:8px 12px}}
+/* Contextual actions appear above the controls, only within interaction range. */
+#app .controls #interact{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);z-index:4;width:auto;min-width:156px;height:auto;min-height:64px;margin:0;padding:12px 24px;border-radius:24px;gap:5px;animation:interaction-arrive 180ms ease-out both}
+#app .controls #interact small{font-size:9px;letter-spacing:.16em}
+@keyframes interaction-arrive{from{opacity:0;translate:0 8px}to{opacity:1;translate:0 0}}
+@media(max-width:560px){#app .controls #interact{bottom:210px;min-height:56px}}
+@media(max-height:580px) and (min-width:561px){#app .controls #interact{bottom:104px;min-height:52px;padding:10px 20px}}
+@media(prefers-reduced-motion:reduce){#app .controls #interact{animation:none}}
+/* A short completion message and a clear next step. */
+#app[data-phase=complete] .results{inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 120px);padding:32px 28px;border-radius:28px}
+#app[data-phase=complete] .results h2{margin:14px 0 10px;font-size:30px}
+#app[data-phase=complete] .results>p{margin:0 0 24px;font-size:14px}
+#app[data-phase=complete] .results>.primary{display:flex;align-items:center;justify-content:center;gap:16px;width:100%;padding:14px 20px;border-radius:24px;font-size:15px}
+#app[data-phase=complete] .results>.map-return{display:block;width:fit-content;margin:20px auto 0;font-size:12px;color:var(--muted);text-decoration:underline;text-underline-offset:4px}
+@media(max-height:520px){#app[data-phase=complete] .results{padding:18px 24px}#app[data-phase=complete] .results .completion-celebration{zoom:.5}#app[data-phase=complete] .results>p{margin-bottom:16px}}
+/* Direction instructions share one predictable position above contextual actions. */
+#app .cue,#app .cue[data-side]{position:fixed;top:auto;bottom:220px;left:50%;right:auto;transform:translateX(-50%);max-width:calc(100vw - 32px)}
+#app .cue[data-side] .cue-body{flex-direction:row}
+@media(max-width:560px){#app .cue,#app .cue[data-side]{bottom:290px}}
+@media(max-height:580px) and (min-width:561px){#app .cue,#app .cue[data-side]{bottom:174px;padding:8px 14px}#app .cue .target{font-size:28px}#app .cue .latin-guide{font-size:14px}}
+/* Help stays out of the learning space until requested. */
+#app #help{position:fixed;left:24px;bottom:26px;z-index:5}
+#app .playbar .feedback{position:fixed;left:50%;bottom:124px;transform:translateX(-50%);width:max-content;max-width:min(540px,calc(100vw - 32px));margin:0;animation:interaction-arrive 180ms ease-out both}
+@media(max-width:560px){#app #help{left:16px;bottom:16px}#app .playbar .feedback{bottom:204px}}
+@media(max-height:580px) and (min-width:561px){#app .playbar .feedback{bottom:104px}}
+@media(prefers-reduced-motion:reduce){#app .playbar .feedback{animation:none}}
+/* Keep the goal and learned direction together in the viewer's eyeline. */
+#app .scene-top{display:flex;flex-direction:column;align-items:center;gap:12px;top:88px;left:16px;right:16px}
+#app .scene-top .mission{width:min(360px,calc(100vw - 32px));max-width:none;text-align:center;padding:16px 22px}
+#app .mission #objective{margin:8px 0 12px;font-size:22px;line-height:1.4}
+#app .mission #objective [lang=ne]{font-family:var(--font-target);font-size:28px}
+#app .mission #objective .latin-guide{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+#app .mission .order{justify-content:center}
+#app .scene-top .pips{position:static;transform:none;margin:0;padding:8px 12px}
+@media(max-width:560px){#app .scene-top{top:76px;gap:8px}#app .scene-top .mission{padding:12px 16px}#app .mission #objective{font-size:19px;margin:6px 0 10px}#app .mission #objective [lang=ne]{font-size:25px}}
+@media(max-height:580px) and (min-width:561px){#app .scene-top{top:72px;gap:6px}#app .scene-top .mission{padding:10px 16px}#app .mission #objective{margin:4px 0 8px;font-size:18px}#app .mission #objective [lang=ne]{font-size:24px}#app .mission .basket{padding-top:5px;margin-top:6px}}
+/* Anchor movement and help consistently along the bottom edge. */
+#app .playbar .controls{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;margin:0}
+#app #help{left:auto;right:24px;bottom:26px}
+@media(max-width:560px){#app .playbar .controls{bottom:24px}#app #help{left:auto;right:12px;bottom:108px}}
+@media(max-height:580px) and (min-width:561px){#app .playbar .controls{bottom:18px}#app #help{bottom:20px}}
+/* Progress belongs beside navigation, outside the centered instruction column. */
+#app .scene-top .pips{position:fixed;top:90px;left:28px;right:auto;transform:none;margin:0;padding:8px 12px}
+@media(max-width:800px){#app .scene-top .pips{top:76px;left:18px}}
+@media(max-width:560px){#app .scene-top .pips{top:auto;bottom:112px;left:16px;gap:5px;padding:7px 9px}}
+@media(max-height:580px) and (min-width:561px){#app .scene-top .pips{top:76px;left:18px}}
+/* Inventory and progress each have their own place, separate from directions. */
+#app .scene-top{top:132px}
+#app .scene-top .pips{position:fixed;top:84px;bottom:auto;left:50%;right:auto;transform:translateX(-50%);gap:8px;margin:0;padding:8px 12px}
+#app .shop-inventory{position:fixed;left:24px;bottom:24px;width:270px;max-width:calc(100vw - 32px);padding:16px 18px;border-radius:22px;background:#fffcf6ef;box-shadow:var(--shadow-card);text-align:left}
+#app .shop-inventory .order{margin-top:10px;justify-content:flex-start}
+@media(max-width:800px){#app .scene-top{top:118px}#app .scene-top .pips{top:72px;bottom:auto;left:50%;transform:translateX(-50%)}#app .shop-inventory{left:18px;bottom:116px;width:240px}}
+@media(max-width:560px){#app .scene-top{top:116px}#app .scene-top .pips{top:72px;bottom:auto;left:50%;gap:7px;padding:7px 10px;transform:translateX(-50%)}#app .shop-inventory{left:12px;bottom:112px;width:205px;padding:12px}.shop-inventory .order-item{font-size:9px;padding:4px 7px}}
+@media(max-height:580px) and (min-width:561px){#app .scene-top{top:112px}#app .scene-top .pips{top:72px;left:50%;transform:translateX(-50%)}#app .shop-inventory{bottom:18px;padding:12px;width:230px}}
+/* A high-contrast action color stands apart from the shop's teal scenery. */
+#app .controls #interact{background:#ffd166;color:#2b2340;border:2px solid #fffaf0;box-shadow:0 4px 0 #b78220,0 8px 24px #2b234040}
+#app .controls #interact:hover{background:#ffe09a;color:#2b2340}
+#app .controls #interact.is-ready{outline-color:#fffaf0}
+#app .controls #interact:focus-visible{outline:3px solid #2b2340;outline-offset:5px}
+/* Compact progress dots with centered completion marks. */
+#app .scene-top .pips{gap:7px;padding:7px 10px;border-radius:24px}
+#app .scene-top .pip{display:grid;place-items:center;flex:0 0 13px;width:13px;height:13px;font-size:10px;line-height:1;padding:0}
+#app .scene-top .pip.active{outline-width:2px}
+@media(max-width:560px){#app .scene-top .pips{gap:6px;padding:6px 9px}}
+/* A mistake gets a brief, immediate suggestion instead of a permanent highlight. */
+#app .controls button.is-suggested{animation:suggestion-blink 500ms ease-in-out 3;outline:3px solid #f2b84b;background:var(--card);box-shadow:var(--shadow-chip)}
+@keyframes suggestion-blink{0%,100%{background:var(--card);outline-color:transparent}40%,65%{background:#ffd166;outline-color:#f2b84b;box-shadow:0 0 0 4px #ffd16655}}
+@media(prefers-reduced-motion:reduce){#app .controls button.is-suggested{animation:none;background:#ffd166;outline-color:#f2b84b}}
+/* Shelf information sits above the action button with a clear gap. */
+#app #shelf-stock{position:fixed;left:50%;right:auto;bottom:220px;transform:translateX(-50%);max-width:calc(100vw - 32px);margin:0;padding:8px 14px;text-align:center;line-height:1.4}
+@media(max-width:560px){#app #shelf-stock{bottom:290px}}
+@media(max-height:580px) and (min-width:561px){#app #shelf-stock{bottom:182px}}

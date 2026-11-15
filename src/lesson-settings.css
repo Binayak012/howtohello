@@ -1,0 +1,23 @@
+.lesson-settings{position:relative;pointer-events:auto;color:#2b2340;font:600 14px/1.4 var(--font-ui,system-ui);text-align:left;letter-spacing:normal}
+.lesson-settings>summary{display:flex;align-items:center;justify-content:center;gap:8px;list-style:none;cursor:pointer;min-height:42px;padding:10px 16px;border:1px solid #e6dcc6;border-radius:24px;background:#fffaf0;box-shadow:0 3px 0 #e3d2b866;white-space:nowrap}
+.lesson-settings>summary::-webkit-details-marker{display:none}
+.lesson-settings>summary:focus-visible{outline:3px solid #1f7a7a;outline-offset:4px}
+.lesson-settings[open]>summary{background:#e0eee7}
+.lesson-settings .lesson-settings-panel{position:absolute;right:0;top:calc(100% + 12px);width:300px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 100px);overflow:auto;padding:16px;background:#fffaf0;border:1px solid #e6dcc6;border-radius:20px;box-shadow:0 14px 40px #2b234030}
+.lesson-settings-panel>p{font:700 11px/1.4 var(--font-ui,system-ui);letter-spacing:.1em;text-transform:uppercase;color:#7a6f86;margin:0 0 12px}
+.lesson-settings .lesson-settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid #e6dcc6;font:600 13px/1.4 var(--font-ui,system-ui)}
+.lesson-settings .lesson-settings-row>button{position:static;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-width:48px;max-width:145px;width:auto;height:auto;min-height:36px;padding:7px 12px;margin:0;border:0;border-radius:18px;background:#e0eee7;color:#195e5e;font:700 12px/1.4 var(--font-ui,system-ui);box-shadow:none;transform:none}
+.arrival-header,.masthead{z-index:30}
+.unit-nav{position:relative;z-index:30}
+.unit-nav>.lesson-settings{margin-left:12px}
+@media(max-width:560px){.lesson-settings>summary{padding:8px 12px;font-size:12px;min-height:38px}.lesson-settings .lesson-settings-panel{position:fixed;right:12px;top:76px}.arrival-header-actions,.header-actions{gap:0}}
+.lesson-settings .lesson-settings-switch{font-size:0!important}
+.lesson-settings .lesson-settings-switch[aria-pressed=true]::after{content:'On';font-size:12px}
+.lesson-settings .lesson-settings-switch[aria-pressed=false]::after{content:'Off';font-size:12px}
+.lesson-settings .lesson-settings-switch[aria-pressed=false]{background:#eee5d5;color:#655b73}
+/* Keep the lesson actions compact and independent. */
+.lesson-settings>summary{width:42px;height:42px;padding:0;font-size:22px}
+.arrival-header-actions,.header-actions{gap:10px}
+.lesson-settings[open] .lesson-settings-panel{transform-origin:top right;animation:lesson-settings-open 180ms ease-out both}
+@keyframes lesson-settings-open{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.lesson-settings[open] .lesson-settings-panel{animation:none}}
