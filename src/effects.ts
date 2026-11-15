@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type EffectName = 'bag' | 'fabric' | 'footstep' | 'key' | 'tap' | 'shopkeeperHmm' | 'shopkeeperPlayful' | 'bottle' | 'fruit' | 'scan' | 'complete' | 'cheer' | 'bumpOops' | 'bumpOuch' | 'bumpExcuse';
+type EffectName = 'bag' | 'fabric' | 'footstep' | 'key' | 'tap' | 'shopkeeperHmm' | 'shopkeeperPlayful' | 'bottle' | 'fruit' | 'scan' | 'complete' | 'cheer' | 'bumpOops' | 'bumpOuch' | 'bumpExcuse' | 'vibraphoneTransition';
 export type BumpKind = 'none' | 'object' | 'person';
 
 const URLS: Record<Exclude<EffectName, 'tap'>, string> = {
@@ -19,6 +19,7 @@ const URLS: Record<Exclude<EffectName, 'tap'>, string> = {
   bumpOuch: `${import.meta.env.BASE_URL}assets/audio/bump_ouch.mp3`,
   // Verified Nepali “माफ गर्नुहोस्” recording — add the file when available (see CREDITS.md).
   bumpExcuse: `${import.meta.env.BASE_URL}assets/audio/ne/maaf_garnuhos.wav`,
+  vibraphoneTransition: `${import.meta.env.BASE_URL}assets/audio/vibraphone_transition_source.mp3`,
 };
 const TAP_ENABLED_KEY = 'wayword.tap-sounds.enabled';
 const FOOTSTEP_ONSET = 0.372;
@@ -229,6 +230,13 @@ export class EffectsController {
   levelComplete() {
     void this.play('complete', 0.17, 0, 2.5, 0.94, true);
     void this.play('cheer', 0.075, 0, 4.5, 1, true);
+  }
+
+  /** Full vibraphone cue once when the shop door opens / “See you soon” caption appears. */
+  shopStreetTransition() {
+    if (this.hasActive('vibraphoneTransition')) return;
+    const buffer = this.buffers.get('vibraphoneTransition');
+    void this.play('vibraphoneTransition', 0.2, 0, buffer?.duration ?? 11, 1, true);
   }
 
   cancel() {

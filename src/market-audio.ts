@@ -1,48 +1,71 @@
 import * as THREE from 'three';
 
 const AMBIENCE_URL = `${import.meta.env.BASE_URL}assets/audio/market_ambience.mp3`;
-const SNIFFLE_URLS = [
-  `${import.meta.env.BASE_URL}assets/audio/child_sniffle_a.mp3`,
-  `${import.meta.env.BASE_URL}assets/audio/child_sniffle_b.mp3`,
-] as const;
+const STALL_CHATTER_URL = `${import.meta.env.BASE_URL}assets/audio/market_stall_chatter.mp3`;
+const BIRD_KOEL_URL = `${import.meta.env.BASE_URL}assets/audio/market_bird_koel.mp3`;
+const CHILD_CRY_URL = `${import.meta.env.BASE_URL}assets/audio/child_cry.mp3`;
 const GIGGLE_URL = `${import.meta.env.BASE_URL}assets/audio/child_giggle.mp3`;
 const BICYCLE_ROLL_URL = `${import.meta.env.BASE_URL}assets/audio/bicycle_roll.mp3`;
+const BICYCLE_PASS_URL = `${import.meta.env.BASE_URL}assets/audio/bicycle_pass.mp3`;
 const BICYCLE_BELL_URL = `${import.meta.env.BASE_URL}assets/audio/bicycle_bell.wav`;
 
-const AMBIENCE_VOLUME = 0.28;
-const AMBIENCE_DUCKED = 0.085;
+const AMBIENCE_VOLUME = 0.42;
+const AMBIENCE_DUCKED = 0.12;
+/**
+ * Koel call under the street bed — source peak is quiet (~0.18), so we
+ * peak-normalize on load and play clearly (still once per minute).
+ */
+const BIRD_KOEL_VOLUME = 0.4;
+const BIRD_KOEL_INTERVAL_MS = 60000;
+/** First call shortly after the street opens so the bird is noticeable. */
+const BIRD_KOEL_FIRST_MS = 2500;
 const FADE_SECONDS = 0.9;
 const LOOP_CROSSFADE_SECONDS = 2.2;
-const SNIFFLE_VOLUME = 0.14;
-const GIGGLE_VOLUME = 0.13;
-const BICYCLE_ROLL_VOLUME = 0.14;
-const BICYCLE_ROLL_SPEECH = 0.04;
-const BICYCLE_BELL_VOLUME = 0.48;
+const GIGGLE_VOLUME = 0.12;
+/** Quiet close-range cry — only while standing next to the child. */
+const CHILD_CRY_VOLUME = 0.09;
+/** Listener must be this close before any cry can start. */
+const CHILD_CRY_NEAR = 3.2;
+/** Walk this far away before cry stops and re-arms. */
+const CHILD_CRY_AWAY = 4.6;
+/** Occasional short cry while staying close (~once per ~22 s). */
+const CHILD_CRY_INTERVAL_MS = 22000;
+const STALL_CHATTER_VOLUME = 0.2;
+const STALL_CHATTER_SPEECH = 0.06;
+/** Start vendor/customer chatter when this close to a stall. */
+const STALL_NEAR = 5.2;
+/** Stop stall chatter after walking clearly away. */
+const STALL_AWAY = 7.2;
+
+/** Brief cry excerpts so we never loop a long sob. */
+const CHILD_CRY_WINDOWS = [
+  { offset: 0.7, duration: 2.0 },
+  { offset: 2.0, duration: 2.1 },
+  { offset: 4.2, duration: 1.9 },
+] as const;
+/** Tire/freewheel bed — keep audible under the louder proximity bell. */
+const BICYCLE_ROLL_VOLUME = 0.28;
+const BICYCLE_ROLL_SPEECH = 0.08;
+/** One-shot pass-by whoosh once per nearby approach (not on teleport). */
+const BICYCLE_PASS_VOLUME = 0.16;
+const BICYCLE_PASS_SPEECH = 0.05;
+const BICYCLE_BELL_VOLUME = 0.36;
 /** Soften the ding only while real voice playback is active — never mute it. */
-const BICYCLE_BELL_SPEECH = 0.32;
+const BICYCLE_BELL_SPEECH = 0.24;
 /**
- * Ring once while approaching, slightly before the closest pass
- * (player↔bike world distance). One ding-ding clip per pass.
+ * Ring / pass-by while approaching, slightly before the closest pass
+ * (player↔bike world distance). Two dings + one whoosh per pass.
  */
 const BICYCLE_BELL_APPROACH = 8.5;
-/** Rearm a new bell sequence only after the bike has clearly moved away. */
+/** Gap before the second ding of a pass (~one crisp ring after another). */
+const BICYCLE_BELL_SECOND_MS = 340;
+/** Rearm a new bell/pass sequence only after the bike has clearly moved away. */
 const BICYCLE_BELL_AWAY = 16;
 /** Ignore proximity when the bicycle teleports/loops (world units between frames). */
 const BICYCLE_TELEPORT_JUMP = 10;
-/** Five 3.6–4.5 s sniffles evenly spaced inside each 32 s cycle. */
-const SNIFFLE_CYCLE_MS = 32000;
-const SNIFFLES_PER_CYCLE = 5;
-const SNIFFLE_INTERVAL_MS = SNIFFLE_CYCLE_MS / SNIFFLES_PER_CYCLE;
 
-/** Soft excerpts so we never play a long continuous cry. */
-const SNIFFLE_WINDOWS = [
-  { source: 0, offset: 0.3, duration: 4.2 },
-  { source: 0, offset: 4.8, duration: 4.5 },
-  { source: 0, offset: 10.0, duration: 4.0 },
-  { source: 1, offset: 0.15, duration: 3.8 },
-  { source: 1, offset: 3.0, duration: 4.0 },
-  { source: 1, offset: 5.5, duration: 3.6 },
-] as const;
+type StallId = 'fruit' | 'bread' | 'flowers';
+const STALL_IDS: StallId[] = ['fruit', 'bread', 'flowers'];
 
 function seamlessLoop(context: AudioContext, source: AudioBuffer, seconds: number): AudioBuffer {
   const overlap = Math.min(Math.floor(seconds * source.sampleRate), Math.floor(source.length / 4));
@@ -71,32 +94,61 @@ function sliceBuffer(context: AudioContext, source: AudioBuffer, offset: number,
   return output;
 }
 
+/** Raise a quiet field recording so it can sit under the market bed. */
+function peakNormalize(context: AudioContext, source: AudioBuffer, target = 0.88): AudioBuffer {
+  let peak = 0;
+  for (let channel = 0; channel < source.numberOfChannels; channel++) {
+    const data = source.getChannelData(channel);
+    for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i]));
+  }
+  if (peak < 1e-5 || peak >= target) return source;
+  const scale = target / peak;
+  const output = context.createBuffer(source.numberOfChannels, source.length, source.sampleRate);
+  for (let channel = 0; channel < source.numberOfChannels; channel++) {
+    const input = source.getChannelData(channel);
+    const result = output.getChannelData(channel);
+    for (let i = 0; i < input.length; i++) result[i] = input[i] * scale;
+  }
+  return output;
+}
+
 type MarketAudioHooks = {
   isSpeechBusy?: () => boolean;
 };
 
 /**
- * Quiet street ambience plus occasional positional child reactions for the
- * Morning Market finale. Independent of the shop Radio on/off control.
+ * Street ambience, occasional koel bird call, near-stall chatter, bicycle
+ * pass audio, close-range child cry while the teddy is missing, and a
+ * relieved giggle on return. Independent of the shop Radio on/off control.
  */
 export class MarketAudioController {
   private ambience?: THREE.Audio;
+  private bird?: THREE.Audio;
   private childVoice?: THREE.PositionalAudio;
   private ambienceBuffer?: AudioBuffer;
-  private sniffleClips: AudioBuffer[] = [];
+  private birdClip?: AudioBuffer;
+  private stallChatterBuffer?: AudioBuffer;
+  private cryClips: AudioBuffer[] = [];
   private giggleClip?: AudioBuffer;
   private bicycleRollBuffer?: AudioBuffer;
+  private bicyclePassBuffer?: AudioBuffer;
   private bicycleBellClip?: AudioBuffer;
   private bicycleRoll?: THREE.PositionalAudio;
+  private bicyclePass?: THREE.PositionalAudio;
   private bicycleBell?: THREE.PositionalAudio;
+  private readonly stallVoices = new Map<StallId, THREE.PositionalAudio>();
+  private readonly stallNear = new Map<StallId, boolean>();
   private bicycleRiding = false;
-  /** True until the ding-ding fires this pass; re-arms only after AWAY. */
+  /** True until the pass whoosh + two-ding sequence fires; re-arms only after AWAY. */
   private bicycleBellArmed = true;
   private bicycleHadSample = false;
   private bicycleLastDistance = Infinity;
+  private bicycleBellSecondTimer?: ReturnType<typeof setTimeout>;
   private readonly bicycleLastWorld = new THREE.Vector3();
   private readonly bicycleWorld = new THREE.Vector3();
   private readonly listenerWorld = new THREE.Vector3();
+  private readonly stallWorld = new THREE.Vector3();
+  private readonly childWorld = new THREE.Vector3();
   private active = false;
   private toyMissing = false;
   private dialogueBusy = false;
@@ -104,9 +156,11 @@ export class MarketAudioController {
   private hidden = document.hidden;
   private disposed = false;
   private generation = 0;
-  private sniffleVariant = 0;
+  private cryVariant = 0;
   private pendingGiggle = false;
-  private sniffleTimer?: ReturnType<typeof setTimeout>;
+  private childNear = false;
+  private cryTimer?: ReturnType<typeof setTimeout>;
+  private birdTimer?: ReturnType<typeof setTimeout>;
   private stopTimer?: ReturnType<typeof setTimeout>;
 
   constructor(private listener?: THREE.AudioListener, private hooks: MarketAudioHooks = {}) {
@@ -115,6 +169,9 @@ export class MarketAudioController {
     this.ambience.setLoop(true);
     this.ambience.gain.gain.value = 0;
     listener.add(this.ambience);
+    this.bird = new THREE.Audio(listener);
+    this.bird.setLoop(false);
+    listener.add(this.bird);
     void this.load();
     this.addUnlockListeners();
     document.addEventListener('visibilitychange', this.onVisibility);
@@ -124,16 +181,25 @@ export class MarketAudioController {
   setActive(active: boolean) {
     if (this.disposed) return;
     if (this.active === active) {
-      if (active) void this.attemptAmbience();
+      if (active) {
+        void this.attemptAmbience();
+        this.armBirdSchedule();
+      }
       return;
     }
     this.active = active;
     this.generation++;
-    if (active) void this.attemptAmbience();
-    else {
+    if (active) {
+      void this.attemptAmbience();
+      this.armBirdSchedule();
+    } else {
       this.pendingGiggle = false;
-      this.clearSniffleSchedule();
+      this.clearCrySchedule();
+      this.clearBirdSchedule();
+      this.stopBird();
+      this.childNear = false;
       this.stopChildVoice();
+      this.stopStallChatter();
       this.stopBicycle(true);
       this.fadeAmbienceOut(true);
     }
@@ -144,9 +210,10 @@ export class MarketAudioController {
     if (this.disposed || !this.listener) return;
     this.stopBicycle(true);
     this.bicycleRoll?.parent?.remove(this.bicycleRoll);
+    this.bicyclePass?.parent?.remove(this.bicyclePass);
     this.bicycleBell?.parent?.remove(this.bicycleBell);
     if (!anchor) {
-      this.bicycleRoll = this.bicycleBell = undefined;
+      this.bicycleRoll = this.bicyclePass = this.bicycleBell = undefined;
       return;
     }
     const place = (ref: number, max: number) => new THREE.PositionalAudio(this.listener!)
@@ -154,15 +221,19 @@ export class MarketAudioController {
       .setRolloffFactor(1.05)
       .setDistanceModel('linear')
       .setMaxDistance(max);
-    this.bicycleRoll = place(2.4, 22);
+    // Roll stays present through the pass; pass whoosh + bell layer on top.
+    this.bicycleRoll = place(3.6, 26);
+    this.bicyclePass = place(3.2, 22);
     // Wide ref distance so the ding stays clear as the bike approaches.
     this.bicycleBell = place(6.5, 28);
     this.bicycleRoll.setLoop(true);
     this.bicycleRoll.setVolume(this.rollVolume());
+    this.bicyclePass.setVolume(this.passVolume());
     this.bicycleBell.setVolume(this.bellVolume());
     if (this.bicycleRollBuffer) this.bicycleRoll.setBuffer(this.bicycleRollBuffer);
+    if (this.bicyclePassBuffer) this.bicyclePass.setBuffer(this.bicyclePassBuffer);
     if (this.bicycleBellClip) this.bicycleBell.setBuffer(this.bicycleBellClip);
-    anchor.add(this.bicycleRoll, this.bicycleBell);
+    anchor.add(this.bicycleRoll, this.bicyclePass, this.bicycleBell);
   }
 
   /**
@@ -215,16 +286,17 @@ export class MarketAudioController {
     if (distance > BICYCLE_BELL_AWAY) {
       this.bicycleBellArmed = true;
     } else if (this.bicycleBellArmed && approaching && distance <= BICYCLE_BELL_APPROACH) {
-      // One ding-ding just before the closest point; stay disarmed until AWAY.
+      // Pass whoosh + two dings just before the closest point; roll keeps looping.
       this.bicycleBellArmed = false;
-      this.ringBicycleBell();
+      this.playBicyclePass();
+      this.ringBicycleBellTwice();
     }
 
     this.bicycleLastWorld.copy(this.bicycleWorld);
     this.bicycleLastDistance = distance;
   }
 
-  /** Attach reactions to the market child mesh (positional). */
+  /** Attach child cry / giggle to the market child mesh (positional). */
   attachChild(anchor?: THREE.Object3D) {
     if (this.disposed || !this.listener) return;
     if (this.childVoice?.parent === anchor) return;
@@ -235,24 +307,110 @@ export class MarketAudioController {
       return;
     }
     this.childVoice = new THREE.PositionalAudio(this.listener)
-      .setRefDistance(2.2)
-      .setRolloffFactor(1.15)
+      .setRefDistance(1.7)
+      .setRolloffFactor(1.35)
       .setDistanceModel('linear')
-      .setMaxDistance(16);
-    this.childVoice.gain.gain.value = SNIFFLE_VOLUME;
+      .setMaxDistance(6.5);
+    this.childVoice.gain.gain.value = CHILD_CRY_VOLUME;
     anchor.add(this.childVoice);
   }
 
   /**
-   * While true, schedule occasional soft sniffles. Turning false after true
-   * stops upset sounds immediately and plays one relieved giggle.
+   * Soft cry only while the teddy is missing and the listener is standing
+   * right next to the child. Call each roam frame.
+   */
+  noteChild() {
+    if (this.disposed || !this.active || this.hidden || !this.toyMissing) {
+      if (this.childNear) {
+        this.childNear = false;
+        this.clearCrySchedule();
+        this.stopChildVoice();
+      }
+      return;
+    }
+    if (!this.childVoice?.parent || !this.listener) return;
+    this.childVoice.parent.getWorldPosition(this.childWorld);
+    this.listener.getWorldPosition(this.listenerWorld);
+    const distance = this.childWorld.distanceTo(this.listenerWorld);
+    if (!this.childNear && distance <= CHILD_CRY_NEAR) {
+      this.childNear = true;
+      if (!this.cryTimer && !this.childVoice.isPlaying) {
+        this.scheduleCry(400 + Math.random() * 800);
+      }
+    } else if (this.childNear && distance > CHILD_CRY_AWAY) {
+      this.childNear = false;
+      this.clearCrySchedule();
+      this.stopChildVoice();
+    }
+  }
+
+  /** Attach looping vendor/customer chatter to each errand stall. */
+  attachStalls(anchors: Partial<Record<StallId, THREE.Object3D | undefined>>) {
+    if (this.disposed || !this.listener) return;
+    this.stopStallChatter();
+    for (const voice of this.stallVoices.values()) {
+      voice.parent?.remove(voice);
+      voice.gain.disconnect();
+    }
+    this.stallVoices.clear();
+    this.stallNear.clear();
+    for (const id of STALL_IDS) {
+      const anchor = anchors[id];
+      if (!anchor) continue;
+      const voice = new THREE.PositionalAudio(this.listener)
+        .setRefDistance(2.8)
+        .setRolloffFactor(1.2)
+        .setDistanceModel('linear')
+        .setMaxDistance(12);
+      voice.setLoop(true);
+      voice.setVolume(this.stallVolume());
+      if (this.stallChatterBuffer) voice.setBuffer(this.stallChatterBuffer);
+      // Slight offset per stall so the three beds don’t phase-lock.
+      voice.offset = id === 'fruit' ? 0 : id === 'bread' ? 7.5 : 15;
+      anchor.add(voice);
+      this.stallVoices.set(id, voice);
+      this.stallNear.set(id, false);
+    }
+  }
+
+  /**
+   * Start/stop stall chatter from listener proximity to each vendor.
+   * Call each roam frame.
+   */
+  noteStalls() {
+    if (this.disposed || !this.active || this.hidden || !this.listener) {
+      this.stopStallChatter();
+      return;
+    }
+    this.listener.getWorldPosition(this.listenerWorld);
+    this.syncStallVolumes();
+    for (const id of STALL_IDS) {
+      const voice = this.stallVoices.get(id);
+      if (!voice?.parent) continue;
+      voice.parent.getWorldPosition(this.stallWorld);
+      const distance = this.stallWorld.distanceTo(this.listenerWorld);
+      const near = this.stallNear.get(id) === true;
+      if (!near && distance <= STALL_NEAR) {
+        this.stallNear.set(id, true);
+        this.startStallVoice(id);
+      } else if (near && distance > STALL_AWAY) {
+        this.stallNear.set(id, false);
+        if (voice.isPlaying) voice.stop();
+      }
+    }
+  }
+
+  /**
+   * While true, allow close-range cry. Turning false stops upset sounds and
+   * plays one relieved giggle when the teddy returns.
    */
   setToyMissing(missing: boolean) {
     if (this.disposed) return;
     const wasMissing = this.toyMissing;
     this.toyMissing = missing;
     if (!missing) {
-      this.clearSniffleSchedule();
+      this.childNear = false;
+      this.clearCrySchedule();
       this.stopChildVoice();
       if (wasMissing && this.active) {
         // Wait for dialogue/pronunciation to finish rather than overlapping.
@@ -264,7 +422,6 @@ export class MarketAudioController {
       return;
     }
     this.pendingGiggle = false;
-    if (this.active) this.scheduleSniffle(1800 + Math.random() * 2200);
   }
 
   /** Skip child reactions while a conversation or pronunciation clip is active. */
@@ -275,6 +432,7 @@ export class MarketAudioController {
     }
     this.dialogueBusy = busy;
     this.syncBicycleRollVolume();
+    this.syncStallVolumes();
     if (busy) {
       this.stopChildVoice();
       this.duck();
@@ -297,6 +455,7 @@ export class MarketAudioController {
     this.duckCount++;
     if (this.duckCount === 1 && this.shouldPlayAmbience() && this.ambience.isPlaying) this.fadeAmbienceTo(volume, 0.2);
     this.syncBicycleRollVolume();
+    this.syncStallVolumes();
   }
 
   restoreDuck() {
@@ -306,57 +465,83 @@ export class MarketAudioController {
       this.fadeAmbienceTo(AMBIENCE_VOLUME, 0.4);
     }
     this.syncBicycleRollVolume();
+    this.syncStallVolumes();
   }
 
   dispose() {
     this.disposed = true;
     this.generation++;
     this.active = false;
-    this.clearSniffleSchedule();
     clearTimeout(this.stopTimer);
+    this.clearCrySchedule();
+    this.clearBirdSchedule();
+    this.clearBicycleBellSchedule();
+    this.stopBird();
     this.stopChildVoice();
+    this.stopStallChatter();
     this.stopBicycle(true);
     this.removeUnlockListeners();
     document.removeEventListener('visibilitychange', this.onVisibility);
     if (this.ambience?.isPlaying) this.ambience.stop();
     this.ambience?.parent?.remove(this.ambience);
     this.ambience?.gain.disconnect();
+    this.bird?.parent?.remove(this.bird);
+    this.bird?.gain.disconnect();
     this.childVoice?.parent?.remove(this.childVoice);
     this.childVoice?.gain.disconnect();
+    for (const voice of this.stallVoices.values()) {
+      voice.parent?.remove(voice);
+      voice.gain.disconnect();
+    }
+    this.stallVoices.clear();
     this.bicycleRoll?.parent?.remove(this.bicycleRoll);
+    this.bicyclePass?.parent?.remove(this.bicyclePass);
     this.bicycleBell?.parent?.remove(this.bicycleBell);
     this.bicycleRoll?.gain.disconnect();
+    this.bicyclePass?.gain.disconnect();
     this.bicycleBell?.gain.disconnect();
     this.ambience = undefined;
+    this.bird = undefined;
     this.childVoice = undefined;
-    this.bicycleRoll = this.bicycleBell = undefined;
+    this.bicycleRoll = this.bicyclePass = this.bicycleBell = undefined;
   }
 
   private async load() {
     if (!this.listener) return;
     const context = this.listener.context;
     try {
-      const [ambience, sniffleA, sniffleB, giggle, roll, bell] = await Promise.all([
+      const [ambience, stallChatter, bird, cry, giggle, roll, pass, bell] = await Promise.all([
         this.decode(AMBIENCE_URL, context),
-        this.decode(SNIFFLE_URLS[0], context),
-        this.decode(SNIFFLE_URLS[1], context),
+        this.decode(STALL_CHATTER_URL, context),
+        this.decode(BIRD_KOEL_URL, context),
+        this.decode(CHILD_CRY_URL, context),
         this.decode(GIGGLE_URL, context),
         this.decode(BICYCLE_ROLL_URL, context),
+        this.decode(BICYCLE_PASS_URL, context),
         this.decode(BICYCLE_BELL_URL, context),
       ]);
       if (this.disposed) return;
       this.ambienceBuffer = seamlessLoop(context, ambience, LOOP_CROSSFADE_SECONDS);
-      const sources = [sniffleA, sniffleB];
-      this.sniffleClips = SNIFFLE_WINDOWS.map(window => sliceBuffer(context, sources[window.source], window.offset, window.duration));
+      this.stallChatterBuffer = seamlessLoop(context, stallChatter, 1.2);
+      this.birdClip = peakNormalize(context, bird);
+      this.cryClips = CHILD_CRY_WINDOWS.map(window => sliceBuffer(context, cry, window.offset, window.duration));
       this.giggleClip = sliceBuffer(context, giggle, 0.05, Math.min(1.8, giggle.duration - 0.05));
       this.bicycleRollBuffer = seamlessLoop(context, roll, 0.35);
-      // Asset is already a short ding-ding; keep a tiny lead-in trim only.
-      this.bicycleBellClip = sliceBuffer(context, bell, 0, Math.min(1.2, bell.duration));
+      this.bicyclePassBuffer = pass;
+      // Asset is a single crisp ding; ringBicycleBellTwice plays it twice per pass.
+      this.bicycleBellClip = sliceBuffer(context, bell, 0, Math.min(0.75, bell.duration));
       this.ambience?.setBuffer(this.ambienceBuffer);
+      if (this.bird && this.birdClip) this.bird.setBuffer(this.birdClip);
+      for (const voice of this.stallVoices.values()) {
+        if (this.stallChatterBuffer) voice.setBuffer(this.stallChatterBuffer);
+      }
       if (this.bicycleRoll && this.bicycleRollBuffer) this.bicycleRoll.setBuffer(this.bicycleRollBuffer);
+      if (this.bicyclePass && this.bicyclePassBuffer) this.bicyclePass.setBuffer(this.bicyclePassBuffer);
       if (this.bicycleBell && this.bicycleBellClip) this.bicycleBell.setBuffer(this.bicycleBellClip);
-      if (this.active) void this.attemptAmbience();
-      if (this.toyMissing && this.active) this.scheduleSniffle(1200);
+      if (this.active) {
+        void this.attemptAmbience();
+        this.armBirdSchedule();
+      }
     } catch (error) {
       if (!this.disposed) console.warn('Market environmental audio could not be loaded.', error);
     }
@@ -370,6 +555,10 @@ export class MarketAudioController {
     return this.voicePlaying() || this.duckCount > 0 ? BICYCLE_ROLL_SPEECH : BICYCLE_ROLL_VOLUME;
   }
 
+  private passVolume() {
+    return this.voicePlaying() || this.duckCount > 0 ? BICYCLE_PASS_SPEECH : BICYCLE_PASS_VOLUME;
+  }
+
   private bellVolume() {
     // Dialogue panels must not mute the bell; only live voice gently ducks it.
     return this.voicePlaying() ? BICYCLE_BELL_SPEECH : BICYCLE_BELL_VOLUME;
@@ -379,20 +568,79 @@ export class MarketAudioController {
     if (this.bicycleRoll?.isPlaying) this.bicycleRoll.setVolume(this.rollVolume());
   }
 
+  private stallVolume() {
+    return this.voicePlaying() || this.duckCount > 0 || this.dialogueBusy ? STALL_CHATTER_SPEECH : STALL_CHATTER_VOLUME;
+  }
+
+  private syncStallVolumes() {
+    const volume = this.stallVolume();
+    for (const voice of this.stallVoices.values()) {
+      if (voice.isPlaying) voice.setVolume(volume);
+    }
+  }
+
+  private startStallVoice(id: StallId) {
+    const voice = this.stallVoices.get(id);
+    if (!voice || !this.stallChatterBuffer || !this.listener) return;
+    void this.listener.context.resume().then(() => {
+      if (this.disposed || !this.active || this.hidden || !voice || this.stallNear.get(id) !== true) return;
+      if (!voice.isPlaying) {
+        voice.setVolume(this.stallVolume());
+        voice.play();
+      } else {
+        voice.setVolume(this.stallVolume());
+      }
+    }).catch(() => { /* Optional stall bed. */ });
+  }
+
+  private stopStallChatter() {
+    for (const id of STALL_IDS) this.stallNear.set(id, false);
+    for (const voice of this.stallVoices.values()) {
+      if (voice.isPlaying) voice.stop();
+    }
+  }
+
   private startBicycleRoll() {
     if (!this.bicycleRoll || !this.bicycleRollBuffer || !this.listener) return;
     void this.listener.context.resume().then(() => {
       if (this.disposed || !this.active || !this.bicycleRiding || this.hidden || !this.bicycleRoll) return;
-      if (!this.bicycleRoll.isPlaying) {
-        this.bicycleRoll.setVolume(this.rollVolume());
-        this.bicycleRoll.play();
-      } else {
-        this.bicycleRoll.setVolume(this.rollVolume());
-      }
+      if (!this.bicycleRollBuffer) return;
+      // Always (re)bind the roll buffer so a prior stop cannot leave playback empty.
+      this.bicycleRoll.setBuffer(this.bicycleRollBuffer);
+      this.bicycleRoll.setVolume(this.rollVolume());
+      if (!this.bicycleRoll.isPlaying) this.bicycleRoll.play();
     }).catch(() => { /* Optional bike bed. */ });
   }
 
-  private ringBicycleBell() {
+  /** One pass-by whoosh per nearby approach — never on loop/teleport spawn. */
+  private playBicyclePass() {
+    if (!this.bicyclePass || !this.bicyclePassBuffer || !this.listener) return;
+    void this.listener.context.resume().then(() => {
+      if (this.disposed || !this.active || !this.bicycleRiding || this.hidden || !this.bicyclePass) return;
+      if (!this.bicyclePassBuffer) return;
+      if (this.bicyclePass.isPlaying) this.bicyclePass.stop();
+      this.bicyclePass.setBuffer(this.bicyclePassBuffer);
+      this.bicyclePass.setVolume(this.passVolume());
+      this.bicyclePass.play();
+    }).catch(() => { /* Optional pass whoosh. */ });
+  }
+
+  /** Play the Pixabay ding twice on each nearby street pass. */
+  private ringBicycleBellTwice() {
+    this.clearBicycleBellSchedule();
+    this.playBicycleBellDing();
+    this.bicycleBellSecondTimer = setTimeout(() => {
+      this.bicycleBellSecondTimer = undefined;
+      this.playBicycleBellDing();
+    }, BICYCLE_BELL_SECOND_MS);
+  }
+
+  private clearBicycleBellSchedule() {
+    clearTimeout(this.bicycleBellSecondTimer);
+    this.bicycleBellSecondTimer = undefined;
+  }
+
+  private playBicycleBellDing() {
     if (!this.bicycleBell || !this.bicycleBellClip || !this.listener) return;
     void this.listener.context.resume().then(() => {
       if (this.disposed || !this.active || !this.bicycleRiding || this.hidden || !this.bicycleBell) return;
@@ -401,6 +649,8 @@ export class MarketAudioController {
       this.bicycleBell.setBuffer(this.bicycleBellClip);
       this.bicycleBell.setVolume(this.bellVolume());
       this.bicycleBell.play();
+      // Keep the tire bed going under the dings.
+      this.startBicycleRoll();
     }).catch(() => { /* Optional bell. */ });
   }
 
@@ -408,7 +658,9 @@ export class MarketAudioController {
     this.bicycleRiding = false;
     this.bicycleHadSample = false;
     this.bicycleLastDistance = Infinity;
+    this.clearBicycleBellSchedule();
     if (this.bicycleRoll?.isPlaying) this.bicycleRoll.stop();
+    if (this.bicyclePass?.isPlaying) this.bicyclePass.stop();
     if (this.bicycleBell?.isPlaying) this.bicycleBell.stop();
     if (resetFlags) this.bicycleBellArmed = true;
   }
@@ -440,7 +692,6 @@ export class MarketAudioController {
       } else {
         this.addUnlockListeners();
       }
-      if (this.toyMissing) this.scheduleSniffle(2000 + Math.random() * 2000);
     } catch {
       this.addUnlockListeners();
     }
@@ -472,47 +723,87 @@ export class MarketAudioController {
     }, FADE_SECONDS * 1000 + 40);
   }
 
-  private scheduleSniffle(delayMs: number) {
-    this.clearSniffleSchedule();
-    if (!this.active || !this.toyMissing || this.disposed) return;
-    this.sniffleTimer = setTimeout(() => this.playSniffle(), delayMs);
-  }
-
-  private clearSniffleSchedule() {
-    clearTimeout(this.sniffleTimer);
-    this.sniffleTimer = undefined;
-  }
-
   private speechBlocksChild() {
     return this.dialogueBusy || Boolean(this.hooks.isSpeechBusy?.());
   }
 
-  private playSniffle() {
-    if (this.disposed || !this.active || !this.toyMissing || this.hidden) return;
-    if (this.speechBlocksChild() || this.childVoice?.isPlaying) {
-      // Keep the 32 s / 5 cadence; retry near the next slot instead of drifting.
-      this.scheduleSniffle(SNIFFLE_INTERVAL_MS * 0.45);
-      return;
-    }
-    const clip = this.sniffleClips[this.sniffleVariant++ % Math.max(1, this.sniffleClips.length)];
-    if (!clip || !this.listener || !this.childVoice) {
-      this.scheduleSniffle(SNIFFLE_INTERVAL_MS);
+  /** First call a few seconds after the street opens, then at most once per minute. */
+  private armBirdSchedule() {
+    if (this.disposed || !this.active || this.hidden || this.birdTimer) return;
+    this.scheduleBird(BIRD_KOEL_FIRST_MS + Math.random() * 1500);
+  }
+
+  private scheduleBird(delayMs: number) {
+    this.clearBirdSchedule();
+    if (!this.active || this.disposed || this.hidden) return;
+    this.birdTimer = setTimeout(() => this.playBird(), delayMs);
+  }
+
+  private clearBirdSchedule() {
+    clearTimeout(this.birdTimer);
+    this.birdTimer = undefined;
+  }
+
+  private playBird() {
+    if (this.disposed || !this.active || this.hidden) return;
+    if (!this.birdClip || !this.listener || !this.bird) {
+      this.scheduleBird(BIRD_KOEL_INTERVAL_MS);
       return;
     }
     const generation = this.generation;
     void this.listener.context.resume().then(() => {
-      if (this.disposed || generation !== this.generation || !this.active || !this.toyMissing || this.hidden || this.speechBlocksChild() || !this.childVoice) {
-        this.scheduleSniffle(SNIFFLE_INTERVAL_MS * 0.45);
+      if (this.disposed || generation !== this.generation || !this.active || this.hidden || !this.bird || !this.birdClip) {
+        this.scheduleBird(BIRD_KOEL_INTERVAL_MS);
+        return;
+      }
+      if (this.bird.isPlaying) this.bird.stop();
+      this.bird.setBuffer(this.birdClip);
+      // Stay clear over the street bed; soften only while speech ducks ambience.
+      this.bird.setVolume(this.duckCount > 0 ? BIRD_KOEL_VOLUME * 0.55 : BIRD_KOEL_VOLUME);
+      this.bird.play();
+      this.scheduleBird(BIRD_KOEL_INTERVAL_MS);
+    }).catch(() => this.scheduleBird(BIRD_KOEL_INTERVAL_MS));
+  }
+
+  private stopBird() {
+    if (this.bird?.isPlaying) this.bird.stop();
+  }
+
+  private scheduleCry(delayMs: number) {
+    this.clearCrySchedule();
+    if (!this.active || !this.toyMissing || !this.childNear || this.disposed) return;
+    this.cryTimer = setTimeout(() => this.playCry(), delayMs);
+  }
+
+  private clearCrySchedule() {
+    clearTimeout(this.cryTimer);
+    this.cryTimer = undefined;
+  }
+
+  private playCry() {
+    if (this.disposed || !this.active || !this.toyMissing || !this.childNear || this.hidden) return;
+    if (this.speechBlocksChild() || this.childVoice?.isPlaying) {
+      this.scheduleCry(CHILD_CRY_INTERVAL_MS * 0.4);
+      return;
+    }
+    const clip = this.cryClips[this.cryVariant++ % Math.max(1, this.cryClips.length)];
+    if (!clip || !this.listener || !this.childVoice) {
+      this.scheduleCry(CHILD_CRY_INTERVAL_MS);
+      return;
+    }
+    const generation = this.generation;
+    void this.listener.context.resume().then(() => {
+      if (this.disposed || generation !== this.generation || !this.active || !this.toyMissing || !this.childNear || this.hidden || this.speechBlocksChild() || !this.childVoice) {
+        this.scheduleCry(CHILD_CRY_INTERVAL_MS * 0.4);
         return;
       }
       if (this.childVoice.isPlaying) this.childVoice.stop();
       this.childVoice.setBuffer(clip);
-      this.childVoice.setVolume(SNIFFLE_VOLUME * (0.85 + Math.random() * 0.2));
-      this.childVoice.setPlaybackRate(0.96 + Math.random() * 0.08);
+      this.childVoice.setVolume(CHILD_CRY_VOLUME * (0.85 + Math.random() * 0.2));
+      this.childVoice.setPlaybackRate(0.97 + Math.random() * 0.06);
       this.childVoice.play();
-      // Next of five starts ~6.4 s later → five plays inside each 32 s window.
-      this.scheduleSniffle(SNIFFLE_INTERVAL_MS);
-    }).catch(() => this.scheduleSniffle(SNIFFLE_INTERVAL_MS));
+      this.scheduleCry(CHILD_CRY_INTERVAL_MS);
+    }).catch(() => this.scheduleCry(CHILD_CRY_INTERVAL_MS));
   }
 
   private playGiggle() {
@@ -551,12 +842,18 @@ export class MarketAudioController {
     this.hidden = document.hidden;
     if (this.hidden) {
       this.generation++;
-      this.clearSniffleSchedule();
+      this.clearCrySchedule();
+      this.clearBirdSchedule();
+      this.clearBicycleBellSchedule();
+      this.childNear = false;
+      this.stopBird();
       this.stopChildVoice();
+      this.stopStallChatter();
       this.stopBicycle(false);
       this.fadeAmbienceOut(false);
     } else if (this.active) {
       void this.attemptAmbience();
+      this.armBirdSchedule();
     }
   };
 }

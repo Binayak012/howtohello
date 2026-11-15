@@ -113,6 +113,11 @@ export class MarketExplorer {
     if(paused){this.marketAudio.setDialogueBusy(false);this.marketAudio.setActive(false);}
     else{
       this.marketAudio.attachChild(this.scene?.market.childBody());
+      this.marketAudio.attachStalls({
+        fruit: this.scene?.market.speakerBody('fruit'),
+        bread: this.scene?.market.speakerBody('bread'),
+        flowers: this.scene?.market.speakerBody('flowers'),
+      });
       this.marketAudio.attachBicycle(this.scene?.market.bicycleBody());
       this.marketAudio.setActive(true);
       this.marketAudio.setToyMissing(!this.completed.has('family'));
@@ -165,6 +170,8 @@ export class MarketExplorer {
       this.pose=walkMarket(this.pose,dx,dz,people);this.scene?.setMarketPose(this.pose);
     }else this.effects.noteBump('none');
     this.effects.setWalking(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.0001,now);
+    this.marketAudio.noteChild();
+    this.marketAudio.noteStalls();
     this.host.dataset.marketX=this.pose.x.toFixed(3);this.host.dataset.marketZ=this.pose.z.toFixed(3);this.host.dataset.marketYaw=this.pose.yaw.toFixed(3);
     this.near=nearbyActivity(this.pose);
     const canPickToy=this.toyNearby()&&!this.completed.has('family')&&!this.tasks.get('family')?.carryingToy;

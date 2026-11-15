@@ -188,11 +188,12 @@
 - Original media: https://sfxmint.com/dl/growth-95eea51c87c783e278776e7a-part-1-v2.mp3
 - License: CC0 1.0
 - License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: Quiet freewheel/tire bed, looped with a short crossfade and played
-  positionally on the delivery bicycle while it rides the market street.
+- Notes: Freewheel/tire bed, looped with a short crossfade and played
+  positionally on the delivery bicycle while it rides the market street,
+  under the pass whoosh and proximity bell.
 - SHA-256: `7ae17f89dc37420c0744543b7efed29a1e2b37ed552d0a9cd645369161caeda5`
 
-## Bicycle pass-by (unused in current mix)
+## Bicycle pass-by
 
 - Creator: SamuelGremaud
 - Source: https://freesound.org/s/458862/
@@ -200,29 +201,46 @@
 - Original title: BIKE - 1
 - License: CC0 1.0
 - License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: Kept in the repo as a licensed spare. The live market mix uses only
-  the looping freewheel roll plus proximity bells so a loop/teleport never
+- Notes: One-shot pass-by whoosh played positionally once per nearby approach,
+  layered with the looping freewheel roll and the proximity bell. Triggered
+  from listener↔bike distance (not ride start), so a loop/teleport never
   plays a whoosh jump at the spawn point.
 - SHA-256: `39b5f6a1ec461654db36e10522ea3ed5c2c14b7bf46c95c3e2c043ef842b9a29`
 
 ## Bicycle bell
 
-- Creator: lechufly
-- Source: https://freesound.org/s/405572/
-- Downloaded file: `bicycle_bell.wav` (trimmed ding-ding used in game)
+- Creator: freesound_community (Pixabay; original Freesound upload ptp8ss)
+- Source: https://pixabay.com/sound-effects/film-special-effects-bicycle-bell-105044/
+- Downloaded file: `bicycle_bell.wav` (single ding used in game)
 - Source archive: `bicycle_bell_source.mp3` (full original download)
-- Original title: Bicycle ring bell
-- License: CC0 1.0
-- License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: The original recording is a long multi-ring take with silence before
-  the first ding. Game audio uses a ~1.18 s mono excerpt (two metallic dings,
-  peak-normalized to ~0.92), played positionally on the bicycle once per pass
-  while approaching (~8.5 units before closest), rearmed after the bike moves
-  clearly away. Dialogue-panel open no longer mutes the bell; live voice
-  playback only gently ducks it. `bicycle_bell_source.mp3` keeps the full
-  original download for provenance.
-- SHA-256 (`bicycle_bell.wav`): `8cd6d0232ef2164b76a96bce9efdf378207b72afc03274d5269092285c200d80`
-- SHA-256 (`bicycle_bell_source.mp3`): `857f822f4b1aaf61be89f765fb759e963f1e8417d5cd82b57544555d78f6feef`
+- Original title: Bicycle Bell / film-special-effects-bicycle-bell-105044
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Notes: Game audio uses a ~0.67 s mono excerpt of one crisp ding
+  (peak-normalized to ~0.92), played positionally twice (~340 ms apart) on
+  each nearby street pass while approaching (~8.5 units before closest),
+  rearmed after the bike moves clearly away. Tire/freewheel roll continues
+  separately. Dialogue-panel open does not mute the bell; live voice
+  playback only gently ducks it. Prior Freesound CC0 ding kept as
+  `bicycle_bell_freesound_excerpt.wav` / `bicycle_bell_freesound_source.mp3`.
+- SHA-256 (`bicycle_bell.wav`): `0c6fb33c2afb73c0c1d2056b339752b7fe93f7b236f98c58b2e0c59d4d651c1a`
+- SHA-256 (`bicycle_bell_source.mp3`): `aacfab8c0382bfdc9187626165e1e02e160eb323b3bdba0cadd5425c06ad3e9c`
+
+## Vibraphone shop-to-street transition
+
+- Creator: freesound_community (Pixabay; original Freesound upload DanJFilms)
+- Source: https://pixabay.com/sound-effects/musical-vibraphone-transition-music-cue-14487/
+- Downloaded file: `vibraphone_transition_source.mp3` (full cue used in game)
+- Edited spare: `vibraphone_transition.wav` (~1.08 s trimmed phrase, unused)
+- Original title: Vibraphone Transition Music Cue / musical-vibraphone-transition-music-cue-14487
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Notes: The full recording plays once (original pitch and speed) when the
+  learner continues from The Little Shop and the “धन्यवाद! See you soon.”
+  caption / open-door walk begins. Journey timers and other audio are
+  unchanged.
+- SHA-256 (`vibraphone_transition_source.mp3`): `266472e53c14d29cac73b3c0020976ef722ca6c53102f453190208cfc81d49b5`
+- SHA-256 (`vibraphone_transition.wav`): `be90c93486710040948a99319b4fa5d358ab81599832f05a04e12f9bbbfa5d03`
 
 ## Soft fabric rustle (lost teddy pickup)
 
@@ -240,44 +258,61 @@
 
 ## Morning Market ambience
 
-- Creator: Garuda1982
-- Source: https://freesound.org/s/757862/
+- Creator: Joseph Sardin (BigSoundBank / La Sonothèque)
+- Source: https://bigsoundbank.com/outdoor-market-2-s2729.html
 - Downloaded file: `market_ambience.mp3`
-- Original title: Supermarket Atmosphere
+- Original title: Outdoor Market #2
+- License: CC0 1.0 (public-domain equivalent)
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Realistic outdoor marketplace recording — open-air chatter and market
+  activity, no music bed. Independent of the shop Radio control. Looped with a
+  short equal-power crossfade and ducked during dialogue / Nepali pronunciation.
+  Prior Outdoor Market #1 kept as `market_ambience_outdoor1_source.mp3`.
+- SHA-256: `4812e0b02e8e0def194a8bbb7141cc3b831a7ce70de5d79aab5f129fda1a9ae9`
+
+## Market street koel bird call
+
+- Creator: freesound_community (Pixabay; original Freesound upload ramblinglibrarian)
+- Source: https://pixabay.com/sound-effects/nature-koel-01-44k-45914/
+- Downloaded file: `market_bird_koel.mp3`
+- Original title: Koel-01-44k / nature-koel-01-44k-45914
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Notes: One-shot bird call on the Morning Market street, at most once per
+  minute while the street bed is active (first call a few seconds after
+  entering). The recording is quiet, so playback peak-normalizes it and uses
+  a clearer level under the market bed; softened further while speech is
+  ducked. Independent of the shop Radio control.
+- SHA-256: `ec0022ffe5cefef6d5fc3e42e1c5e8ef488a65b861728324c1c78fa3c30f5219`
+
+## Stall vendor/customer chatter (near fruit, bakery, flowers)
+
+- Creator: SamuelGremaud
+- Source: https://freesound.org/s/544338/
+- Downloaded file: `market_stall_chatter.mp3`
+- Original title: MARKET
 - License: CC0 1.0
 - License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: Quiet supermarket bed with distant chatter, footsteps, and light
-  activity, recorded without background music. Independent of the shop Radio
-  control. Stored from Freesound’s public HQ/LQ preview encode for
-  redistribution; played quietly with a short equal-power loop crossfade and
-  further ducked during dialogue and Nepali pronunciation.
-- SHA-256: `82e65b414bbd4d84738fead1fc33d7cdcc2f204b366c598d03f85fbfb77fe81d`
+- Notes: Outdoor market ambience with people talking at stalls (Sault, France).
+  Looped and played positionally on each errand vendor only while the player
+  stands nearby; ducked during dialogue/pronunciation. Offset per stall so the
+  three beds stay desynchronized.
+- SHA-256: `fde8a49013c0f9f7aa852a74a87f312356c4c196ed711fb3144a1f771f37d9b9`
 
-## Child soft sniffle A (lost-toy reaction)
+## Child cry (lost-toy reaction)
 
-- Creator: craigsmith
-- Source: https://freesound.org/s/479836/
-- Downloaded file: `child_sniffle_a.mp3`
-- Original title: R15-57-Child Crying.wav
-- License: CC0 1.0
-- License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: Quiet child sniffling / slight whine (not sobbing). Only brief
-  excerpts are played positionally at the market child, with several seconds
-  of silence between variations, while the teddy is still missing.
-- SHA-256: `c68c530ee7e4ae9151f15010d5c436928eba95c045c3bb5bca52aaf5a7b33703`
-
-## Child soft sniffle B (lost-toy reaction)
-
-- Creator: craigsmith
-- Source: https://freesound.org/s/479840/
-- Downloaded file: `child_sniffle_b.mp3`
-- Original title: R28-53-Fussy Baby.wav
-- License: CC0 1.0
-- License URL: https://creativecommons.org/publicdomain/zero/1.0/
-- Notes: Soft baby sniffles and fussing, used as a second quiet variation for
-  the lost-toy child. Same positional, speech-priority, and spacing rules as
-  sniffle A.
-- SHA-256: `7d1128828ddabdd877b3012d3434439a52cb1232dd3a0396197d8f6b6050e7fb`
+- Creator: SergeQuadrado (Sergei Chetvertnykh)
+- Source: https://pixabay.com/sound-effects/people-child-crying-113110/
+- Downloaded file: `child_cry.mp3`
+- Original title: Child crying / people-child-crying-113110
+- License: Pixabay Content License
+- License URL: https://pixabay.com/service/license-summary/
+- Notes: ~2 s excerpts from the recording play quietly and positionally only
+  when the player stands very close to the market child and the teddy is still
+  missing (~once per 22 s while nearby). Silenced after walking away. Skipped
+  during dialogue/pronunciation. Relieved giggle still plays when the teddy
+  returns.
+- SHA-256: `1ba4631ef6a12c22b0efd24a894263c180e416ba1508bafc468f290227469102`
 
 ## Child relieved giggle
 

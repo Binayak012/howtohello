@@ -265,7 +265,7 @@ export class GoldenMarket {
   }
   availableItem(id:ActivityId){return [...this.taskItems].find(([key,item])=>!key.includes('wrong')&&item.activity===id&&item.object.visible)?.[0];}
   returnItem(key:string){const item=this.taskItems.get(key);if(item)item.object.visible=true;}
-  /** World anchor for positional child reactions (sniffles / giggle). */
+  /** World anchor for positional child relief giggle. */
   childBody(){return this.people.find(person=>person.role==='child')?.body;}
   /** World anchor for the delivery bicycle pass audio. */
   bicycleBody(){return this.bicycle;}

@@ -47,8 +47,8 @@ async function trackMarketAudio(page:Page){
     window.fetch=async(input,init)=>{
       const response=await fetchOriginal(input,init);
       const url=typeof input==='string'?input:input instanceof Request?input.url:String(input);
-      if(/assets\/audio\/(market_ambience|child_sniffle_a|child_sniffle_b|child_giggle)\.mp3/.test(url)){
-        const match=url.match(/\/(market_ambience|child_sniffle_a|child_sniffle_b|child_giggle)\.mp3/);
+      if(/assets\/audio\/(market_ambience|market_stall_chatter|market_bird_koel|child_cry|child_giggle|bicycle_bell|bicycle_roll|bicycle_pass)\.(mp3|wav)/.test(url)){
+        const match=url.match(/\/(market_ambience|market_stall_chatter|market_bird_koel|child_cry|child_giggle|bicycle_bell|bicycle_roll|bicycle_pass)\.(mp3|wav)/);
         if(match)plays.push(`load:${match[1]}`);
       }
       return response;
@@ -74,7 +74,9 @@ test('market ambience assets load and restart cleans environmental audio',async(
   await expect(page.locator('#market-roam')).toBeVisible();
 
   await expect.poll(async()=>(await plays(page)).filter(item=>item==='load:market_ambience').length,{timeout:15000}).toBeGreaterThan(0);
-  await expect.poll(async()=>(await plays(page)).some(item=>item.startsWith('load:child_sniffle')),{timeout:15000}).toBe(true);
+  await expect.poll(async()=>(await plays(page)).includes('load:market_stall_chatter'),{timeout:15000}).toBe(true);
+  await expect.poll(async()=>(await plays(page)).includes('load:market_bird_koel'),{timeout:15000}).toBe(true);
+  await expect.poll(async()=>(await plays(page)).includes('load:child_cry'),{timeout:15000}).toBe(true);
   await expect.poll(async()=>(await plays(page)).includes('load:child_giggle'),{timeout:15000}).toBe(true);
 
   // Radio control remains available and independent of market ambience loading.
@@ -93,7 +95,7 @@ test('market ambience assets load and restart cleans environmental audio',async(
 });
 
 test('market environmental audio files are served',async({page})=>{
-  for(const file of['market_ambience.mp3','child_sniffle_a.mp3','child_sniffle_b.mp3','child_giggle.mp3','fabric_rustle.mp3','bicycle_roll.mp3','bicycle_pass.mp3','bicycle_bell.wav']){
+  for(const file of['market_ambience.mp3','market_stall_chatter.mp3','market_bird_koel.mp3','child_cry.mp3','child_giggle.mp3','fabric_rustle.mp3','bicycle_roll.mp3','bicycle_pass.mp3','bicycle_bell.wav']){
     const response=await page.request.get(`/assets/audio/${file}`);
     expect(response.ok(),file).toBeTruthy();
     expect(Number(response.headers()['content-length']||0)).toBeGreaterThan(1000);

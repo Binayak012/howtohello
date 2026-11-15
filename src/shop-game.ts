@@ -556,6 +556,7 @@ function beginDeparture() {
   if (phase !== 'complete' || !atShopDoor(player)) return;
   el('results').hidden = true;
   phase = 'departing'; busy = true; clearTimeout(idleTimer); clearTimeout(stuckTimer); render();
+  effects.shopStreetTransition();
   el('market-journey').hidden = false;
   el('skip-journey').focus();
   showJourneyStage(0);
@@ -589,6 +590,11 @@ function startExploring() {
   el('market-arrival').hidden=true;
   effects.useMarketFootsteps(true);
   marketAudio.attachChild(scene?.market.childBody());
+  marketAudio.attachStalls({
+    fruit: scene?.market.speakerBody('fruit'),
+    bread: scene?.market.speakerBody('bread'),
+    flowers: scene?.market.speakerBody('flowers'),
+  });
   marketAudio.attachBicycle(scene?.market.bicycleBody());
   if (scene) scene.market.onBicyclePass = (riding, progress) => marketAudio.noteBicycle(riding, progress);
   marketAudio.setActive(true);
