@@ -10,7 +10,8 @@ import './market.css';
 import './numbers.css';
 import './market-play.css';
 import './shop-guide.css';
-import { atCheckout, atShopDoor, baseBeats, facedRack, rackFor, relativeTo, routeTo, start, step, turn, type Item } from './core';
+import { atCheckout, atShopDoor, baseBeats, facedRack, racks, rackFor, relativeTo, routeTo, start, step, turn, type Item } from './core';
+import { askNeighbor, neighborAiAvailable, type NeighborTurn } from './shopkeeper-ai';
 import { EffectsController } from './effects';
 import { pack } from './pack';
 import { speakerIcon, WordPronouncer } from './pronunciation';
@@ -27,7 +28,8 @@ app.innerHTML = `
   <header class="masthead"><div class="lesson-navigation"><a class="brand" href="${import.meta.env.BASE_URL === '/game/' ? '/' : './'}" aria-label="Wayword home"><span class="brand-mark">w</span>wayword<span class="brand-dot">.</span></a><a class="lesson-back-map quiet" href="/map/index.html">← Back to map</a></div><span class="chapter">THE LITTLE SHOP · CHAPTER 05</span><div class="header-actions"><button id="radio-toggle" class="quiet radio-toggle" aria-label="Turn radio off" aria-pressed="true">Radio: On</button><button id="tap-sounds" class="quiet tap-toggle" type="button"></button><button id="nepali-script" class="quiet reading-toggle" aria-label="Hide Nepali script" aria-pressed="true" title="Show or hide Nepali script">ने</button><button id="reading-help" class="quiet reading-toggle" aria-label="Show Latin-letter guides" aria-pressed="true" title="Show Latin-letter guides">Aa</button><button id="fullscreen" class="quiet" aria-label="Enter full screen">⛶</button><button id="restart" class="quiet">Start over ↺</button></div></header>
 
   <main><section class="game" aria-label="Shop language lesson"><div id="scene"></div><div class="vignette"></div>
-    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div>
+    <div class="scene-top"><div class="mission"><div id="mission-label" class="eyebrow">YOUR FIRST ERRAND</div><strong id="objective"></strong><div id="order" class="order"></div><div id="basket" class="basket" aria-live="polite"></div></div><div id="pips" class="pips"></div><div class="scene-help"><button id="ask-shopkeeper" class="hint-button ask-button" aria-expanded="false" aria-controls="ask-panel" hidden><span aria-hidden="true">💬</span>Ask the way</button><button id="help" class="hint-button" aria-label="Get a hint"><span aria-hidden="true">?</span>Hint</button></div></div>
+    <section id="ask-panel" class="ask-panel" aria-label="Ask the shopkeeper the way" hidden><header><strong>Ask the shopkeeper</strong><button id="ask-close" class="ask-close" aria-label="Close">✕</button></header><p class="ask-how">Ask where something is: <b lang="ne">चिया कहाँ छ?</b> <span class="latin-guide">chiya kahaa chha?</span> <small>Where is the tea?</small></p><div id="ask-reply" class="ask-reply" aria-live="polite"></div><form id="ask-form" class="ask-form"><input id="ask-input" aria-label="Your question" placeholder="Type your question…" maxlength="120" autocomplete="off" spellcheck="false"><button type="submit">Ask</button></form><p id="ask-status" class="ask-status" role="status" aria-live="polite"></p></section>
     <div class="cue" aria-label="Direction cue"><span id="cue-item" class="cue-item"></span><div class="cue-body"><span class="cue-arrow" aria-hidden="true"><i id="cue-arrow">↑</i></span><div class="cue-word"><div id="target" class="target" lang="ne"></div><span id="pronunciation" class="latin-guide" lang="ne-Latn"></span></div></div><p id="caption" hidden></p></div>
     <div class="scene-bottom"><div class="compass"><strong id="facing">N</strong><span>↑</span></div><div id="position" class="position"></div></div><div id="shelf-stock" class="shelf-stock" hidden></div>
     <div id="checkout-status" class="checkout-status" role="status" aria-live="polite" hidden></div>
@@ -268,6 +270,46 @@ function answerQuiz(key: Move) {
   }, scene?.reducedMotion ? 150 : 650);
 }
 
+/* Ask the shopkeeper the way: an AI shopkeeper answers in Nepali directions, worked out by the game itself. */
+const askPhases: Phase[] = ['shop', 'checkout', 'collect', 'exit'];
+const askHistory: NeighborTurn[] = [];
+let askMisses = 0;
+const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+function shopFacts() {
+  const places: Record<string, string[]> = {};
+  for (const rack of racks) places[rack.item] = relativeTo(player, rack.col, rack.row).ways;
+  places.counter = relativeTo(player, 4, 2).ways; places.door = relativeTo(player, 4, 8).ways;
+  const facing = facedRack(player)?.item ?? (atCheckout(player) ? 'counter' : undefined);
+  const want = phase === 'shop' ? baseBeats[index].item : phase === 'exit' ? 'door' : 'counter';
+  return { places, want, facing };
+}
+function setAskOpen(open: boolean) {
+  el('ask-panel').hidden = !open; el('ask-shopkeeper').setAttribute('aria-expanded', String(open));
+  if (open) (el('ask-input') as HTMLInputElement).focus(); else focusScene();
+}
+async function askTheWay(event: SubmitEvent) {
+  event.preventDefault();
+  const input = el('ask-input') as HTMLInputElement, message = input.value.trim(), form = el('ask-form');
+  if (!message || form.dataset.busy) return;
+  form.dataset.busy = 'true'; input.disabled = true; el('ask-status').textContent = 'The shopkeeper is thinking…';
+  const asked = run;
+  try {
+    const reply = await askNeighbor({ neighbor: 'shop', stage: 'ask', message, history: askHistory, mistakes: askMisses + misses, hints: hintLevel, completed: index, shop: shopFacts() });
+    if (asked !== run) return;
+    askHistory.push({ role: 'learner', text: message }, { role: 'neighbor', text: reply.nepali }); askHistory.splice(0, Math.max(0, askHistory.length - 8));
+    if (!reply.success) askMisses++;
+    scene?.greetShopkeeper(); effects.shopkeeperReaction();
+    el('ask-reply').innerHTML = `<p class="ask-you">${escapeHtml(message)}</p><div class="ask-answer" data-success="${reply.success}"><strong lang="ne">${escapeHtml(reply.nepali)}</strong>${reply.roman ? `<span class="latin-guide">${escapeHtml(reply.roman)}</span>` : ''}${reply.english ? `<small>${escapeHtml(reply.english)}</small>` : ''}${reply.tip ? `<p class="ask-tip"><span aria-hidden="true">💡</span> ${escapeHtml(reply.tip)}</p>` : ''}</div>`;
+    el('ask-status').textContent = ''; input.value = '';
+  } catch {
+    if (asked !== run) return;
+    el('ask-status').textContent = neighborAiAvailable() ? 'The shopkeeper didn’t hear you. Try again, or tap Hint.' : 'Asking isn’t set up here yet. Tap Hint for help.';
+    if (!neighborAiAvailable()) { el('ask-shopkeeper').hidden = true; setTimeout(() => setAskOpen(false), 2500); }
+  } finally {
+    delete form.dataset.busy; input.disabled = false; if (!el('ask-panel').hidden) input.focus();
+  }
+}
+
 function render() {
   app.dataset.phase = phase;
   document.querySelector<HTMLElement>('.chapter')!.textContent = phase === 'market' ? 'THE MORNING MARKET · CHAPTER 06 · FINALE' : 'THE LITTLE SHOP · CHAPTER 05';
@@ -321,6 +363,8 @@ function render() {
   el('pips').innerHTML = Array.from({ length: total }, (_, i) => `<span class="pip ${i < active ? 'done' : i === active ? 'active' : ''}">${i < active ? '✓' : ''}</span>`).join('');
   const inactive = busy || ['story', 'learn', 'scanning', 'departing', 'complete', 'market'].includes(phase);
   document.querySelectorAll<HTMLButtonElement>('[data-action], #help').forEach(button => button.disabled = inactive);
+  const canAsk = neighborAiAvailable() && askPhases.includes(phase);
+  el('ask-shopkeeper').hidden = !canAsk; if (!canAsk && !el('ask-panel').hidden) { el('ask-panel').hidden = true; el('ask-shopkeeper').setAttribute('aria-expanded', 'false'); }
   const labels: Partial<Record<Phase, string>> = { checkout: 'Place items', scanning: 'Scanning…', collect: 'Pick up bag', exit: 'Bag packed ✓', complete: 'Done ✓' };
   const label = labels[phase] ?? 'Take 1';
   el('interact').innerHTML = `${label}<small>SPACE</small>`;
@@ -557,6 +601,7 @@ function restart() {
   journeyTimers.forEach(clearTimeout); journeyTimers = [];
   pronouncer.stop();
   effects.cancel();
+  askHistory.length = 0; askMisses = 0; el('ask-reply').replaceChildren(); el('ask-status').textContent = ''; el('ask-panel').hidden = true;
   phase = 'story'; player = start(); practiceIndex = 0; index = 0; misses = 0; helped = false; busy = false; hintLevel = 0; stock = createStock(); outcomes = [];
   scene?.resetStock(); scene?.setBeacon(undefined); scene?.setPlayer(player, true);
   el('market-journey').hidden = true;
@@ -591,6 +636,9 @@ el('reading-help').onclick = () => {
   if (!['story', 'learn', 'complete', 'departing', 'market'].includes(phase)) focusScene();
 };
 el('help').onclick = () => { giveHint(false); focusScene(); };
+el('ask-shopkeeper').onclick = () => setAskOpen(el('ask-panel').hidden === true);
+el('ask-close').onclick = () => setAskOpen(false);
+el('ask-form').addEventListener('submit', event => void askTheWay(event as SubmitEvent));
 el('fullscreen').onclick = async () => {
   try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
   catch { say('The shop already fills this window.', 'Your browser may not support hiding its toolbar.'); }
@@ -598,6 +646,8 @@ el('fullscreen').onclick = async () => {
 document.addEventListener('fullscreenchange', () => el('fullscreen').setAttribute('aria-label', document.fullscreenElement ? 'Exit full screen' : 'Enter full screen'));
 window.addEventListener('keydown', event => {
   if (phase === 'market') return;
+  // Typing a question to the shopkeeper: keys are letters, not moves. Escape closes the panel.
+  if (event.target instanceof HTMLElement && event.target.closest('#ask-panel')) { if (event.key === 'Escape') setAskOpen(false); return; }
   const arrow = ({ ArrowLeft:'left', ArrowRight:'right', ArrowUp:'forward', ArrowDown:'backward' } as Record<string, Move>)[event.key];
   if (phase === 'learn') {
     if (arrow && el('intro-card').dataset.step === 'quiz') { event.preventDefault(); if (!event.repeat) answerQuiz(arrow); }

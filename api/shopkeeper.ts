@@ -11,13 +11,14 @@
  */
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
 
-type Neighbor = 'fruit' | 'bread' | 'flowers' | 'family';
-type Stage = 'greet' | 'where' | 'brief' | 'thanks' | 'done';
+type Neighbor = 'fruit' | 'bread' | 'flowers' | 'family' | 'shop';
+type Stage = 'greet' | 'where' | 'brief' | 'thanks' | 'done' | 'ask';
 
 const people: Record<Neighbor, string> = {
   fruit: 'Maya, a cheerful fruit seller at the Morning Market. She wants the learner to pick TWO RED apples (दुई रातो स्याउ) from her stall and hand them to her.',
   bread: 'Arun, a friendly baker. A loaf of bread costs THREE coins (तीन रुपैयाँ); the learner should put down three coins.',
   flowers: 'Tara, a gentle flower seller. She wants FOUR YELLOW flowers (चार पहेँलो फूल) from the LEFT vase (बायाँ).',
+  shop: 'the kind shopkeeper of a small corner shop. The learner is shopping and asks you where things are. You answer with the Nepali direction words they just learned: दायाँ (daayaa, right), बायाँ (baayaa, left), अगाडि (agaadi, ahead), पछाडि (pachhaadi, behind).',
   family: 'a worried family whose child lost a RED teddy (रातो टेडी). It is BEHIND (पछाडि) the planter just past the bakery.',
 };
 
@@ -26,6 +27,7 @@ const goals: Record<Stage, string> = {
   where: 'You asked where the teddy is; a picture shows it hiding behind a plant. Success = the learner says "behind" in Nepali (पछाडि / pachhadi / pachadi, any spelling).',
   brief: 'You have just made your request (see who you are). The learner should AGREE to help by saying OK in Nepali (हुन्छ / hunchha / huncha / hus). If they ask a question about the request, answer it simply (that is not success yet). Success = they agreed in Nepali.',
   thanks: 'The learner just finished your errand and you thanked them. They should say THANK YOU back in Nepali (धन्यवाद / dhanyabaad / dhanyabad). Success = they thanked you in Nepali.',
+  ask: 'The learner asks you the way. Answer ONLY from the directions listed below, which are exact for where they stand right now; never guess. Use the direction words in your Nepali answer, e.g. "चिया तपाईंको दायाँ छ।" If they ask about something not in the list, say kindly that the shop does not sell it. The useful Nepali question is "___ कहाँ छ?" (___ kahaa chha?, where is ___?). Success = they asked in Nepali, even partly (e.g. "chiya kahaa"); if they asked in English, still answer, and the tip teaches them to ask with "kahaa chha?".',
   done: 'The errand is finished. Chat briefly. Success = the learner says goodbye in Nepali (नमस्ते / bida / pheri bhetaula).',
 };
 
@@ -61,6 +63,20 @@ export async function POST(request: Request): Promise<Response> {
       : 'MEDIUM: when they miss, give a clue first; give the exact word if they have already missed this step.';
   const mismatch = input.mismatch === undefined ? '' : `\nThe learner brought you the wrong amount (${count(input.mismatch)}). Gently say so, and ask them to try again (agreeing with हुन्छ is success).`;
 
+  // The shop sends where every shelf is from the learner's point of view; only known places and words are used.
+  let facts = '';
+  if (neighbor === 'shop') {
+    const places: Record<string, string> = { fruit: 'fruit (फलफूल)', veg: 'vegetables (तरकारी)', tea: 'tea (चिया)', bag: 'bags (झोला)', bottle: 'water (पानी)', rice: 'rice (चामल)', snack: 'biscuits (बिस्कुट)', book: 'notebooks (कापी)', counter: 'the counter (काउन्टर)', door: 'the door (ढोका)' };
+    const words: Record<string, string> = { forward: 'अगाडि (ahead)', left: 'बायाँ (on the left)', right: 'दायाँ (on the right)', backward: 'पछाडि (behind)' };
+    const shop = (input.shop ?? {}) as { places?: Record<string, unknown>; want?: unknown; facing?: unknown };
+    const lines = Object.entries(shop.places ?? {}).filter(([place]) => place in places).map(([place, ways]) => {
+      const list = (Array.isArray(ways) ? ways : []).filter((way): way is string => typeof way === 'string' && way in words).slice(0, 2);
+      return list.length ? `- ${places[place]}: ${list.map(way => words[way]).join(' + ')}${shop.facing === place ? ' (right in front of them, they can take it now)' : ''}` : '';
+    }).filter(Boolean);
+    const want = typeof shop.want === 'string' && shop.want in places ? `\nOn their list right now: ${places[shop.want]}.` : '';
+    facts = `\nWhere things are, from where the learner stands now:\n${lines.join('\n')}${want}`;
+  }
+
   const history = (Array.isArray(input.history) ? input.history : []).slice(-8).map(turn => {
     const item = turn as { role?: unknown; text?: unknown };
     return { role: item.role === 'neighbor' ? 'assistant' as const : 'user' as const, content: clean(item.text, 300) };
@@ -68,7 +84,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const messages = [
     { role: 'system', content: system },
-    { role: 'system', content: `You are ${people[neighbor]}\nThis moment: ${goals[stage]}${mismatch}\nSupport level: ${support}\nErrands the learner has already finished today: ${done}.` },
+    { role: 'system', content: `You are ${people[neighbor]}\nThis moment: ${goals[stage]}${mismatch}${facts}\nSupport level: ${support}\nErrands the learner has already finished today: ${done}.` },
     ...history,
     { role: 'user', content: message },
   ];

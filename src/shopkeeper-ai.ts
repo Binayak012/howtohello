@@ -4,6 +4,8 @@ export type NeighborReply = { nepali: string; roman: string; english: string; ti
 export type NeighborQuestion = {
   neighbor: string; stage: string; message: string; history: NeighborTurn[];
   mistakes: number; hints: number; completed: number; mismatch?: number;
+  /** Shop only: where each shelf, the counter and the door are from where the learner stands. */
+  shop?: { places: Record<string, string[]>; want?: string; facing?: string };
 };
 
 // Automated test browsers keep the scripted market unless a test asks for the AI with ?ai.
