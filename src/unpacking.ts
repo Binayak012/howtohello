@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {ArrivalScene} from './arrival-scene';
 import {colors,colorOrder,items,checks,initialUnpack,see,canStartUnpacking,pick,answer,currentItem,unpacked,checked,type ColorId,type ItemId,type UnpackState} from './unpack-state';
 import {completeLevel,levelHref,nextLevel} from './progression';
+import {EffectsController} from './effects';
 
 type Phase='intro'|'study'|'unpack'|'check'|'complete';
 type Point=[number,number,number];
@@ -18,20 +19,23 @@ const places:Record<ItemId,{to:Point;rot:Point;scale:number;where:string}>={
   trousers:{to:[.3,1.075,-8],rot:[0,0,0],scale:1,where:'on the lower shelf'},
   scarf:{to:[-1.55,1.63,-8.1],rot:[0,0,Math.PI/2],scale:1.5,where:'on a hook'},
 };
-const packed:Record<ItemId,Point>={sweater:[-.14,.19,-.08],shirt:[.14,.19,-.08],towel:[-.14,.19,.09],trousers:[.14,.19,.09],scarf:[0,.25,0]};
+const packed:Record<ItemId,Point>={sweater:[-.14,.22,-.06],shirt:[.14,.22,-.06],towel:[-.14,.2,.1],trousers:[.14,.2,.1],scarf:[0,.28,.02]};
+/** Tip garments toward the room camera so their silhouettes read in the open suitcase. */
+const packedTilt:Record<ItemId,Point>={sweater:[-.95,0,.15],shirt:[-1.05,0,-.1],towel:[-.55,0,0],trousers:[-.85,0,.2],scarf:[-.4,.2,0]};
 const sights:Record<typeof checks[number]['target'],Point>={towel:places.towel.to,plant:[-1.45,.55,-5.6],shirt:places.shirt.to};
 
 class UnpackingGame{
   private app=document.querySelector<HTMLDivElement>('#app')!;
   private state:UnpackState=initialUnpack();private phase:Phase='intro';private selected:ColorId='red';private pending=false;private reading=true;
   private scene?:ArrivalScene;private suitcase=new THREE.Group();private things=new Map<ItemId,THREE.Group>();
+  private effects=new EffectsController();private disposeTapControls=()=>{};
   private pose={x:eye.x,z:eye.z,yaw:0,pitch:-.3};private aim={yaw:0,pitch:-.3};private raf=0;
   private timers=new Set<ReturnType<typeof setTimeout>>();private drag?:{id:number;x:number;y:number;moved:boolean};private ignoreClickUntil=0;
   private panel:HTMLElement;private overlay:HTMLElement;private observer:ResizeObserver;
   constructor(){
     this.app.className='arrival-app unpack-app';this.app.dataset.readingHelp='true';
     const home=import.meta.env.BASE_URL==='/game/'?'/':'./';
-    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><span class="arrival-chapter">CHAPTER 02 · UNPACK YOUR SUITCASE</span><div class="arrival-header-actions"><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="unpack-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
+    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><div class="lesson-navigation"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><a class="lesson-back-map arrival-quiet" href="/map/index.html">← Back to map</a></div><span class="arrival-chapter">CHAPTER 02 · UNPACK YOUR SUITCASE</span><div class="arrival-header-actions"><button id="tap-sounds" class="arrival-quiet" type="button"></button><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><section class="arrival-dialogue unpack-panel" aria-labelledby="unpack-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
     this.panel=this.app.querySelector('.unpack-panel')!;this.overlay=this.app.querySelector('#arrival-overlay')!;
     try{
       this.scene=new ArrivalScene(this.app.querySelector('#arrival-world')!,()=>{});
@@ -40,6 +44,7 @@ class UnpackingGame{
     }catch{this.app.querySelector('#arrival-world')!.innerHTML='<div class="arrival-fallback unpack-fallback"><p>The 3D room isn’t available on this device.<br>Use the buttons to unpack.</p></div>';}
     this.observer=new ResizeObserver(this.layout);this.observer.observe(this.panel);
     this.app.addEventListener('click',this.click);this.app.addEventListener('pointerdown',this.pointerDown);this.app.addEventListener('pointermove',this.pointerMove);this.app.addEventListener('pointerup',this.pointerUp);this.app.addEventListener('pointercancel',this.pointerUp);
+    this.disposeTapControls=this.effects.bindTapControls(this.app,this.app.querySelector('#tap-sounds')!);
     window.addEventListener('keydown',this.keyDown);
     this.intro();this.frame();
   }
@@ -48,6 +53,16 @@ class UnpackingGame{
   private setPhase(phase:Phase){this.phase=phase;this.app.dataset.phase=phase;}
   private word(color:ColorId,english=true){const c=colors[color];return `<strong lang="ne">${c.word}</strong><span class="arrival-roman" lang="ne-Latn">${c.roman}</span>${english?`<small>${c.meaning}</small>`:''}`;}
   private dot(color:ColorId){return `<i class="unpack-dot" style="--swatch:${colors[color].hex}" aria-hidden="true"></i>`;}
+  private garmentIcon(id:ItemId){
+    const paths:Record<ItemId,string>={
+      shirt:'M8 8.5L4 11v2.2l4-1.3V20h8v-8.1l4 1.3V11l-4-2.5L15.2 5H8.8L8 8.5zM12 9.2l1.6-1.4h-3.2L12 9.2z',
+      trousers:'M8 4h8l.5 7H13l-.5 9h-1L11 11H7.5L8 4zm1.2 1.2v5.3h1.3V5.2H9.2zm4.1 0v5.3h1.3V5.2h-1.3z',
+      sweater:'M7 9.2L3 12v2.3l4-1.4V20h10v-7.1l4 1.4V12l-4-2.8V6.2c0-1.2-1-2.2-2.2-2.2h-3.6C8 4 7 5 7 6.2v3z',
+      towel:'M6 5h12v14H6V5zm2 2v10h8V7H8zm1.5 1.5h5v1.2h-5V8.5z',
+      scarf:'M5 10.5c0-2 1.8-3.5 4-3.5h2c1 0 1.8.4 2.3 1l3.2-1.4.8 1.8-2.8 1.2c.3.5.5 1.1.5 1.7 0 2-1.8 3.5-4 3.5H9c-2.2 0-4-1.5-4-3.5zm4-1.7c-.9 0-1.6.5-1.6 1.2S8.1 12 9 12h2c.9 0 1.6-.5 1.6-1.2s-.7-1.2-1.6-1.2H9z',
+    };
+    return `<svg class="unpack-garment" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[id]}"/></svg>`;
+  }
 
   // ---- 3D room additions -------------------------------------------------
   private buildRoom(){
@@ -61,15 +76,64 @@ class UnpackingGame{
     for(const item of items){
       const group=new THREE.Group(),hex=colors[item.color].hex,trim=item.color==='white'?'#d8d2c4':new THREE.Color(hex).multiplyScalar(.75).getStyle();
       group.userData.item=item.id;group.name=`unpack-${item.id}`;
-      if(item.id==='scarf'){scene.box(group,[.32,.05,.1],[0,0,0],hex);for(const x of[-.12,.12])scene.box(group,[.03,.052,.1],[x,0,0],trim);}
-      else if(item.id==='trousers'){scene.box(group,[.24,.07,.15],[0,0,0],hex);scene.box(group,[.012,.072,.15],[0,0,0],trim);}
-      else if(item.id==='shirt'){scene.box(group,[.24,.07,.15],[0,0,0],hex);scene.box(group,[.12,.075,.035],[0,.002,-.06],trim);}
-      else{scene.box(group,[.24,.07,.15],[0,0,0],hex);for(const x of[-.07,.07])scene.box(group,[.015,.072,.15],[x,0,0],trim);}
+      this.buildGarment(group,item.id,hex,trim);
       this.things.set(item.id,group);
     }
     this.repack();
   }
-  private repack(){for(const item of items){const group=this.things.get(item.id)!;this.suitcase.add(group);group.position.set(...packed[item.id]);group.rotation.set(0,0,0);group.scale.setScalar(1);}}
+  /** Folded clothing silhouettes so shirt, trousers, and the rest read at a glance. */
+  private buildGarment(group:THREE.Group,id:ItemId,hex:string,trim:string){
+    const scene=this.scene!;
+    if(id==='shirt'){
+      // Compact button-up: short sleeves, open collar, and a center placket.
+      scene.box(group,[.095,.038,.145],[0,0,-.015],hex);
+      for(const x of[-.09,.09])scene.box(group,[.07,.032,.05],[x,.004,.06],hex);
+      scene.box(group,[.055,.045,.03],[0,.01,.095],trim);
+      scene.box(group,[.02,.046,.03],[-.02,.012,.09],hex);
+      scene.box(group,[.02,.046,.03],[.02,.012,.09],hex);
+      scene.box(group,[.016,.048,.12],[0,.012,-.01],trim);
+      for(const z of[-.04,.02])scene.box(group,[.014,.05,.014],[0,.014,z],trim);
+      return;
+    }
+    if(id==='trousers'){
+      // Waistband with two separate legs — an inverted-U silhouette.
+      scene.box(group,[.18,.04,.045],[0,0,.085],hex);
+      scene.box(group,[.18,.046,.018],[0,.006,.105],trim);
+      for(const x of[-.05,.05])scene.box(group,[.07,.04,.17],[x,0,-.02],hex);
+      scene.box(group,[.028,.045,.04],[0,.005,.05],trim);
+      return;
+    }
+    if(id==='scarf'){
+      scene.box(group,[.32,.032,.05],[0,0,0],hex);
+      scene.box(group,[.05,.038,.055],[0,.005,0],trim);
+      for(const x of[-.18,.18])for(const z of[-.018,0,.018])scene.box(group,[.04,.025,.01],[x,0,z],trim);
+      return;
+    }
+    if(id==='towel'){
+      scene.box(group,[.17,.035,.17],[0,0,0],hex);
+      scene.box(group,[.17,.045,.04],[0,.008,.075],trim);
+      scene.box(group,[.14,.018,.13],[0,.02,-.01],trim);
+      return;
+    }
+    // Sweater: thicker body, long sleeves with cuffs, round crew neck, ribbed hem.
+    scene.box(group,[.12,.055,.125],[0,0,-.02],hex);
+    for(const x of[-.11,.11]){
+      scene.box(group,[.1,.05,.065],[x,.006,.03],hex);
+      scene.box(group,[.035,.055,.065],[x*1.4,.006,.03],trim);
+    }
+    scene.box(group,[.08,.06,.05],[0,.014,.08],trim);
+    scene.box(group,[.045,.04,.035],[0,.02,.095],hex);
+    scene.box(group,[.12,.06,.035],[0,.012,-.085],trim);
+  }
+  private repack(){
+    for(const item of items){
+      const group=this.things.get(item.id)!;
+      this.suitcase.add(group);
+      group.position.set(...packed[item.id]);
+      group.rotation.set(...packedTilt[item.id]);
+      group.scale.setScalar(1);
+    }
+  }
   /** Turns toward a point. On wide screens the panel covers the left, so the point is framed right of center. */
   private lookAt(point:Point){
     const dx=point[0]-this.pose.x,dz=point[2]-this.pose.z,wide=innerWidth>560&&this.phase!=='intro'&&this.phase!=='complete';
@@ -86,8 +150,8 @@ class UnpackingGame{
   // ---- Screens ------------------------------------------------------------
   private intro(){
     this.setPhase('intro');this.panel.hidden=true;this.overlay.hidden=false;this.homeView();
-    this.overlay.innerHTML=`<article class="arrival-card"><span class="arrival-spark" aria-hidden="true">✦</span><p class="arrival-eyebrow">CHAPTER 02 · SETTLING IN</p><h1 id="arrival-title">Unpack your suitcase.</h1><p>Asha knocks and leans in the doorway.<br>“Let’s make this room yours. I’ll call out colors.”</p><div class="unpack-intro-dots">${colorOrder.map(color=>this.dot(color)).join('')}</div><button class="arrival-primary" data-unpack="begin">Learn five colors ↗</button><p class="arrival-small">Five colors · Five things to put away · No timer</p></article>`;
-    this.overlay.querySelector<HTMLButtonElement>('button')!.focus();
+    this.overlay.innerHTML=`<article class="arrival-card"><span class="arrival-spark" aria-hidden="true">✦</span><p class="arrival-eyebrow">CHAPTER 02 · SETTLING IN</p><h1 id="arrival-title" tabindex="-1">Unpack your suitcase.</h1><p>Asha knocks and leans in the doorway.<br>“Let’s make this room yours. I’ll call out colors.”</p><div class="unpack-intro-dots">${colorOrder.map(color=>this.dot(color)).join('')}</div><button class="arrival-primary" data-unpack="begin">Learn five colors ↗</button><p class="arrival-small">Five colors · Five things to put away · No timer</p></article>`;
+    this.overlay.querySelector<HTMLElement>('#arrival-title')!.focus({preventScroll:true});
   }
   private study(){
     const entering=this.phase!=='study';this.setPhase('study');this.overlay.hidden=true;this.panel.hidden=false;this.state=see(this.state,this.selected);if(entering)this.homeView();
@@ -98,7 +162,7 @@ class UnpackingGame{
   private task(feedback=''){
     this.setPhase('unpack');this.panel.hidden=false;const item=currentItem(this.state)!;
     const left=items.filter((_,index)=>index>=this.state.task);
-    this.panel.innerHTML=`<header><span class="arrival-eyebrow">UNPACKING · ${this.state.task+1} OF 5</span><button class="arrival-quiet" data-unpack="review">Colors</button></header><h2 id="unpack-title" tabindex="-1">“Put away the <span class="unpack-target">${this.word(item.color,false)}</span> one.”</h2><p>Find it in the suitcase on the bed: tap it in the room or below.</p><div class="unpack-tray" role="group" aria-label="In your suitcase">${[...left].sort((a,b)=>a.name.localeCompare(b.name)).map(thing=>`<button data-item="${thing.id}">${this.dot(thing.color)}<span>${thing.name}</span></button>`).join('')}</div><p class="unpack-status" role="status" aria-live="polite">${feedback}</p>`;
+    this.panel.innerHTML=`<header><span class="arrival-eyebrow">UNPACKING · ${this.state.task+1} OF 5</span><button class="arrival-quiet" data-unpack="review">Colors</button></header><h2 id="unpack-title" tabindex="-1">“Put away the <span class="unpack-target">${this.word(item.color,false)}</span> one.”</h2><p>Find it in the suitcase on the bed: tap it in the room or below.</p><div class="unpack-tray" role="group" aria-label="In your suitcase">${[...left].sort((a,b)=>a.name.localeCompare(b.name)).map(thing=>`<button data-item="${thing.id}">${this.dot(thing.color)}${this.garmentIcon(thing.id)}<span>${thing.name}</span></button>`).join('')}</div><p class="unpack-status" role="status" aria-live="polite">${feedback}</p>`;
     this.layout();
   }
   private check(feedback=''){
@@ -112,8 +176,8 @@ class UnpackingGame{
     try{saved=completeLevel(localStorage,'second-lesson');}catch{/* Completion still shows without storage. */}
     const {next,href}=this.nextStep(),chapter=String(next.chapter).padStart(2,'0');
     this.overlay.hidden=false;
-    this.overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 02 · COMPLETE</p><h2 id="arrival-title">Your room, your colors.</h2><p>Everything has a place, and you can name every color.</p><ul class="arrival-words unpack-words" aria-label="Five colors you used">${colorOrder.map(color=>`<li>${this.dot(color)}<strong lang="ne">${colors[color].word}</strong><span class="arrival-roman" lang="ne-Latn">${colors[color].roman}</span></li>`).join('')}</ul><p class="arrival-stats"><strong>Five colors · ${this.state.misses} ${this.state.misses===1?'retry':'retries'}</strong></p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small><strong>${next.title}</strong><span>Lila waves from the courtyard. She could use a hand with her apples.</span></div><a class="arrival-primary" href="${href}">Start chapter ${chapter} ↗</a><div class="arrival-card-actions"><button class="arrival-quiet" data-unpack="look">Look around</button><button class="arrival-quiet" data-unpack="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
-    this.overlay.querySelector<HTMLAnchorElement>('a')!.focus({preventScroll:true});
+    this.overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 02 · COMPLETE</p><h2 id="arrival-title" tabindex="-1">Your room, your colors.</h2><p>Everything has a place, and you can name every color.</p><ul class="arrival-words unpack-words" aria-label="Five colors you used">${colorOrder.map(color=>`<li>${this.dot(color)}<strong lang="ne">${colors[color].word}</strong><span class="arrival-roman" lang="ne-Latn">${colors[color].roman}</span></li>`).join('')}</ul><p class="arrival-stats"><strong>Five colors · ${this.state.misses} ${this.state.misses===1?'retry':'retries'}</strong></p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small><strong>${next.title}</strong><span>Lila waves from the courtyard. She could use a hand with her apples.</span></div><a class="arrival-primary" href="${href}">Start chapter ${chapter} ↗</a><div class="arrival-card-actions"><button class="arrival-quiet" data-unpack="look">Look around</button><button class="arrival-quiet" data-unpack="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
+    this.overlay.querySelector<HTMLElement>('#arrival-title')!.focus({preventScroll:true});
   }
 
   // ---- Actions ------------------------------------------------------------
@@ -172,6 +236,11 @@ class UnpackingGame{
     if(this.scene){this.scene.reset();this.scene.placeInside(this.pose);this.repack();}
     this.intro();
   }
-  dispose(){this.timers.forEach(timer=>clearTimeout(timer));cancelAnimationFrame(this.raf);this.observer.disconnect();this.scene?.dispose();this.app.removeEventListener('click',this.click);this.app.removeEventListener('pointerdown',this.pointerDown);this.app.removeEventListener('pointermove',this.pointerMove);this.app.removeEventListener('pointerup',this.pointerUp);this.app.removeEventListener('pointercancel',this.pointerUp);window.removeEventListener('keydown',this.keyDown);}
+  dispose(){this.timers.forEach(timer=>clearTimeout(timer));cancelAnimationFrame(this.raf);this.observer.disconnect();this.disposeTapControls();this.effects.dispose();this.scene?.dispose();this.app.removeEventListener('click',this.click);this.app.removeEventListener('pointerdown',this.pointerDown);this.app.removeEventListener('pointermove',this.pointerMove);this.app.removeEventListener('pointerup',this.pointerUp);this.app.removeEventListener('pointercancel',this.pointerUp);window.removeEventListener('keydown',this.keyDown);}
 }
-export function startUnpacking(){const game=new UnpackingGame();if(import.meta.hot)import.meta.hot.dispose(()=>game.dispose());return game;}
+export function startUnpacking(){
+  const game=new UnpackingGame(),dispose=()=>game.dispose();
+  window.addEventListener('pagehide',dispose,{once:true});
+  if(import.meta.hot)import.meta.hot.dispose(()=>{window.removeEventListener('pagehide',dispose);game.dispose();});
+  return game;
+}

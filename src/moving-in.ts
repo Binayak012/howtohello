@@ -1,8 +1,9 @@
 import './moving-in.css';
 import {ArrivalScene} from './arrival-scene';
-import {arrivalStart,initialArrival,arrivalAction,arrivalSpots,arrivalPhrases,walkArrival,type ArrivalPose,type ArrivalState,type ArrivalTarget,type ArrivalAction} from './arrival-state';
+import {arrivalStart,initialArrival,arrivalAction,arrivalSpots,arrivalPhrases,walkArrival,arrivalBump,type ArrivalPose,type ArrivalState,type ArrivalTarget,type ArrivalAction} from './arrival-state';
 import {completeLevel,levelHref,nextLevel} from './progression';
 import {recordLanguageStarted} from './learning-history';
+import {EffectsController} from './effects';
 
 const suitcaseIcon='<svg viewBox="0 0 64 80" aria-hidden="true"><rect x="20" y="3" width="24" height="12" rx="4" fill="none" stroke="#645b4f" stroke-width="5"/><rect x="7" y="14" width="50" height="59" rx="10" fill="#648e9d"/><path d="M20 15v56M44 15v56" stroke="#a5b8bb" stroke-width="4"/><rect x="32" y="25" width="16" height="20" rx="3" fill="#efc65d"/><circle cx="40" cy="35" r="5" fill="#fff0ad"/><circle cx="17" cy="74" r="4" fill="#5c6056"/><circle cx="47" cy="74" r="4" fill="#5c6056"/></svg>';
 const ticket=`<div class="arrival-ticket">${suitcaseIcon}<div><strong>Your suitcase</strong><small>Blue, with a yellow sun tag.<br>Match this picture when Biren shows you the bags.</small></div></div>`;
@@ -12,33 +13,37 @@ class MovingInGame{
   private app=document.querySelector<HTMLDivElement>('#app')!;
   private state:ArrivalState=initialArrival();private pose:ArrivalPose=arrivalStart();
   private scene?:ArrivalScene;private keys=new Set<string>();private raf=0;private last=0;
+  private effects=new EffectsController();
   private phase:'intro'|'explore'|'talking'|'arriving'|'complete'='intro';private dialogue?:Dialogue;private pending=false;private misses=0;
+  private arrivingUntil=0;
   private keyReady=false;private bagReady=false;private reading=true;private doorOpen=false;private completed=false;
   private timers=new Set<ReturnType<typeof setTimeout>>();private drag?:{id:number;x:number;y:number;moved:boolean};private ignoreClicksUntil=0;
+  private disposeTapControls=()=>{};
   private feedback:HTMLElement;private modal:HTMLElement;private talk:HTMLButtonElement;private journal:HTMLElement;private pocket:HTMLElement;
   constructor(){
     try{recordLanguageStarted(localStorage,'ne');}catch{/* Optional local history. */}
     this.app.className='arrival-app';this.app.dataset.readingHelp='true';
     const home=import.meta.env.BASE_URL==='/game/'?'/':'./';
-    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><span class="arrival-chapter">CHAPTER 01 · YOUR FIRST HELLO</span><div class="arrival-header-actions"><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><aside class="arrival-journal"></aside><aside class="arrival-pocket"></aside><span class="arrival-crosshair" aria-hidden="true">+</span><button id="arrival-talk" class="arrival-talk" disabled>Walk up to Asha to begin</button><p class="arrival-status" role="status" aria-live="polite"></p><div class="arrival-controls" aria-label="Courtyard movement controls"><button data-arrival-move="turnleft" aria-label="Look left">↶</button><button data-arrival-move="forward" aria-label="Walk forward">↑</button><button data-arrival-move="turnright" aria-label="Look right">↷</button><button data-arrival-move="left" aria-label="Walk left">←</button><button data-arrival-move="backward" aria-label="Walk backward">↓</button><button data-arrival-move="right" aria-label="Walk right">→</button></div><p class="arrival-keys">WASD move · ← → turn · drag to look · E / Space interact</p><section class="arrival-dialogue" role="dialog" aria-modal="false" aria-labelledby="arrival-dialogue-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
+    this.app.innerHTML=`<div id="arrival-world" class="arrival-world"></div><div class="arrival-vignette"></div><header class="arrival-header"><div class="lesson-navigation"><a class="arrival-brand" href="${home}" aria-label="Wayword home"><span>w</span>wayword<i>.</i></a><a class="lesson-back-map arrival-quiet" href="/map/index.html">← Back to map</a></div><span class="arrival-chapter">CHAPTER 01 · YOUR FIRST HELLO</span><div class="arrival-header-actions"><button id="tap-sounds" class="arrival-quiet" type="button"></button><button id="arrival-reading" class="arrival-quiet" aria-label="Show Latin-letter guides" aria-pressed="true">Aa</button><button id="arrival-restart" class="arrival-quiet">Start over ↺</button></div></header><aside class="arrival-journal"></aside><aside class="arrival-pocket"></aside><span class="arrival-crosshair" aria-hidden="true">+</span><button id="arrival-talk" class="arrival-talk" disabled>Walk up to Asha to begin</button><p class="arrival-status" role="status" aria-live="polite"></p><div class="arrival-controls" aria-label="Courtyard movement controls"><button data-arrival-move="turnleft" aria-label="Look left">↶</button><button data-arrival-move="forward" aria-label="Walk forward">↑</button><button data-arrival-move="turnright" aria-label="Look right">↷</button><button data-arrival-move="left" aria-label="Walk left">←</button><button data-arrival-move="backward" aria-label="Walk backward">↓</button><button data-arrival-move="right" aria-label="Walk right">→</button></div><p class="arrival-keys">WASD move · ← → turn · drag to look · E / Space interact</p><section class="arrival-dialogue" role="dialog" aria-modal="false" aria-labelledby="arrival-dialogue-title" hidden></section><section id="arrival-overlay" class="arrival-overlay" role="dialog" aria-modal="false" aria-labelledby="arrival-title"></section>`;
     this.feedback=this.app.querySelector('.arrival-status')!;this.modal=this.app.querySelector('.arrival-dialogue')!;this.talk=this.app.querySelector('#arrival-talk')!;this.journal=this.app.querySelector('.arrival-journal')!;this.pocket=this.app.querySelector('.arrival-pocket')!;
     try{this.scene=new ArrivalScene(this.app.querySelector('#arrival-world')!,target=>{if(performance.now()>this.ignoreClicksUntil)this.interact(target);});}
     catch{this.fallback();}
     this.app.addEventListener('click',this.click);this.app.addEventListener('pointerdown',this.pointerDown);this.app.addEventListener('pointermove',this.pointerMove);this.app.addEventListener('pointerup',this.pointerUp);this.app.addEventListener('pointercancel',this.pointerUp);this.app.addEventListener('lostpointercapture',this.pointerUp);
+    this.disposeTapControls=this.effects.bindTapControls(this.app,this.app.querySelector('#tap-sounds')!);
     window.addEventListener('resize',this.layoutConversation);window.addEventListener('keydown',this.keyDown);window.addEventListener('keyup',this.keyUp);window.addEventListener('blur',this.clearInput);document.addEventListener('visibilitychange',this.clearInput);
     this.intro();this.updateJournal();this.frame(performance.now());
   }
   private duration(ms:number){return this.scene?.reduced||matchMedia('(prefers-reduced-motion: reduce)').matches?0:ms;}
   private later(ms:number,callback:()=>void){const timer=setTimeout(()=>{this.timers.delete(timer);callback();},this.duration(ms));this.timers.add(timer);}
   private setState(action:ArrivalAction){this.state=arrivalAction(this.state,action);this.updateJournal();}
-  private setPhase(phase:typeof this.phase){this.phase=phase;this.app.dataset.phase=phase;this.scene?.setConversation(phase==='talking');this.clearInput();}
+  private setPhase(phase:typeof this.phase){this.phase=phase;this.app.dataset.phase=phase;this.scene?.setConversation(phase==='talking');this.clearInput();this.effects.setActive(phase==='explore'||phase==='arriving');}
   private say(text:string){this.feedback.textContent=text;}
   private focusWorld(){const world=this.scene?.renderer.domElement??this.talk;world.focus({preventScroll:true});}
   private phrase(key:keyof typeof arrivalPhrases){const phrase=arrivalPhrases[key];return `<div class="arrival-phrase"><strong lang="ne">${phrase.word}</strong><span class="arrival-roman" lang="ne-Latn">${phrase.roman}</span><small>${phrase.meaning}</small></div>`;}
   private intro(){
     this.setPhase('intro');const overlay=this.app.querySelector<HTMLElement>('#arrival-overlay')!;overlay.hidden=false;
-    overlay.innerHTML=`<article class="arrival-card"><span class="arrival-spark" aria-hidden="true">✦</span><p class="arrival-eyebrow">CHAPTER 01 · MOVING IN</p><h1 id="arrival-title">Your first hello.</h1><p>A new home. A few unfamiliar faces.<br>Your first words can make them feel familiar.</p><p>Meet Asha, your host. Collect your key,<br>find your suitcase, and bring it home.</p>${ticket}<button class="arrival-primary" data-arrival-action="begin">Step into the courtyard ↗</button><p class="arrival-small">Learn by doing · Five useful phrases · No timer</p></article>`;
-    overlay.querySelector<HTMLButtonElement>('button')!.focus();
+    overlay.innerHTML=`<article class="arrival-card"><span class="arrival-spark" aria-hidden="true">✦</span><p class="arrival-eyebrow">CHAPTER 01 · MOVING IN</p><h1 id="arrival-title" tabindex="-1">Your first hello.</h1><p>A new home. A few unfamiliar faces.<br>Your first words can make them feel familiar.</p><p>Meet Asha, your host. Collect your key,<br>find your suitcase, and bring it home.</p>${ticket}<button class="arrival-primary" data-arrival-action="begin">Step into the courtyard ↗</button><p class="arrival-small">Learn by doing · Five useful phrases · No timer</p></article>`;
+    overlay.querySelector<HTMLElement>('#arrival-title')!.focus({preventScroll:true});
   }
   private updateJournal(){
     const state=this.state;
@@ -73,10 +78,10 @@ class MovingInGame{
       else if(this.state.rejectedWrongCase)this.showDialogue('porter-blue');else this.showDialogue('porter-teach');return;
     }
     if(chosen==='suitcase'){
-      this.setState('bag');this.bagReady=false;this.scene?.takeCase();this.say('You lift your own suitcase. Carry it to the green door.');return;
+      this.setState('bag');this.bagReady=false;this.scene?.takeCase();this.effects.bagRustle();this.say('You lift your own suitcase. Carry it to the green door.');return;
     }
     if(chosen==='parcel'){
-      this.setState('parcel');this.scene?.takeParcel();this.say('You picked up a parcel. Lila is near the courtyard bench.');return;
+      this.setState('parcel');this.scene?.takeParcel();this.effects.bagRustle();this.say('You picked up a parcel. Lila is near the courtyard bench.');return;
     }
     if(chosen==='neighbor'){
       if(!this.state.greeted){this.information('Lila · your neighbor','Hello, new neighbor.','Asha is waiting to welcome you. Come say hello afterward.');return;}
@@ -91,7 +96,7 @@ class MovingInGame{
       if(!this.state.bagHeld){this.say(this.state.bagHome?'Your suitcase is already safely inside.':'Collect your suitcase from Biren, then bring it home.');return;}
       if(!this.state.thanked){this.showDialogue('host-thanks');return;}
       // Let the walk inside finish and hold on the room for a moment before the results appear.
-      this.pending=true;this.setPhase('arriving');this.scene?.enter();this.say('You carry your suitcase over the threshold.');this.later(1500,()=>this.say('Welcome home.'));this.later(3100,()=>{this.pending=false;this.setState('home');this.finish();});
+      this.pending=true;this.setPhase('arriving');this.arrivingUntil=performance.now()+this.duration(2200);this.scene?.enter();this.effects.setWalking(this.arrivingUntil>performance.now());this.say('You carry your suitcase over the threshold.');this.later(1500,()=>this.say('Welcome home.'));this.later(2200,()=>this.effects.setWalking(false));this.later(3100,()=>{this.pending=false;this.setState('home');this.finish();});
     }
   }
   private showDialogue(dialogue:Dialogue){this.dialogue=dialogue;this.setPhase('talking');this.modal.hidden=false;
@@ -123,8 +128,8 @@ class MovingInGame{
     const words=(Object.keys(arrivalPhrases) as (keyof typeof arrivalPhrases)[]).map(key=>`<li><strong lang="ne">${arrivalPhrases[key].word}</strong><span class="arrival-roman" lang="ne-Latn">${arrivalPhrases[key].roman}</span></li>`).join('');
     const upNext=step.ready?`<strong>${step.next.title}</strong><span>${step.next.subtitle}</span>`:`<strong>Chapter ${chapter} is on its way</strong><span>Your progress is saved. You’ll pick up right here when it opens.</span>`;
     const overlay=this.app.querySelector<HTMLElement>('#arrival-overlay')!;overlay.hidden=false;
-    overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 01 · COMPLETE</p><h2 id="arrival-title">Welcome home.</h2><p>You greeted Asha, asked politely, said thanks, and found your own suitcase.</p><ul class="arrival-words" aria-label="Five phrases you used">${words}</ul><p class="arrival-stats"><strong>Five phrases used · ${this.misses} ${this.misses===1?'retry':'retries'}</strong> · ${this.state.parcelReturned?'You also helped Lila.':'Lila’s parcel is optional practice.'}</p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small>${upNext}</div><a class="arrival-primary" href="${step.href}">${step.label}</a><div class="arrival-card-actions"><button class="arrival-quiet" data-arrival-action="explore">Keep exploring</button><button class="arrival-quiet" data-arrival-action="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
-    overlay.querySelector<HTMLAnchorElement>('a')!.focus({preventScroll:true});
+    overlay.innerHTML=`<article class="arrival-card arrival-complete"><span class="arrival-spark" aria-hidden="true">✓</span><p class="arrival-eyebrow">CHAPTER 01 · COMPLETE</p><h2 id="arrival-title" tabindex="-1">Welcome home.</h2><p>You greeted Asha, asked politely, said thanks, and found your own suitcase.</p><ul class="arrival-words" aria-label="Five phrases you used">${words}</ul><p class="arrival-stats"><strong>Five phrases used · ${this.misses} ${this.misses===1?'retry':'retries'}</strong> · ${this.state.parcelReturned?'You also helped Lila.':'Lila’s parcel is optional practice.'}</p><div class="arrival-next"><small>UP NEXT · CHAPTER ${chapter}</small>${upNext}</div><a class="arrival-primary" href="${step.href}">${step.label}</a><div class="arrival-card-actions"><button class="arrival-quiet" data-arrival-action="explore">Keep exploring</button><button class="arrival-quiet" data-arrival-action="restart">Replay chapter</button></div><p class="arrival-small">${saved?'Progress saved on this browser.':'Progress saving is unavailable. You can still replay this lesson.'}</p></article>`;
+    overlay.querySelector<HTMLElement>('#arrival-title')!.focus({preventScroll:true});
   }
   private click=(event:MouseEvent)=>{
     const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>('button'):null;if(!button||button.disabled)return;
@@ -138,9 +143,9 @@ class MovingInGame{
     if(button===this.talk){this.interact();return;}
     if(this.pending)return;
     const move=button.dataset.arrivalMove;
-    if(move&&event.detail===0&&this.phase==='explore'){if(move==='turnleft'||move==='turnright')this.pose.yaw+=(move==='turnleft'?1:-1)*.4;else{const f=move==='forward'?1:move==='backward'?-1:0,s=move==='right'?1:move==='left'?-1:0;this.pose=walkArrival(this.pose,(-Math.sin(this.pose.yaw)*f+Math.cos(this.pose.yaw)*s)*.65,(-Math.cos(this.pose.yaw)*f-Math.sin(this.pose.yaw)*s)*.65,this.scene?.people());}this.scene?.setPose(this.pose);return;}
+    if(move&&event.detail===0&&this.phase==='explore'){const before={x:this.pose.x,z:this.pose.z};if(move==='turnleft'||move==='turnright')this.pose.yaw+=(move==='turnleft'?1:-1)*.4;else{const f=move==='forward'?1:move==='backward'?-1:0,s=move==='right'?1:move==='left'?-1:0;this.pose=walkArrival(this.pose,(-Math.sin(this.pose.yaw)*f+Math.cos(this.pose.yaw)*s)*.65,(-Math.cos(this.pose.yaw)*f-Math.sin(this.pose.yaw)*s)*.65,this.scene?.people());}this.scene?.setPose(this.pose);if(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.001)this.effects.footstep();return;}
     if(action==='hello'&&this.dialogue==='host-greet'){this.setState('greet');this.scene?.react('host','hello',this.pose);this.showDialogue('host-please');}
-    if(action==='please'&&this.dialogue==='host-please'){this.setState('please');this.scene?.offerKey(this.pose);this.closeDialogue();this.pending=true;this.say('Asha takes the key from her hook and offers it on the table.');this.later(900,()=>{this.keyReady=true;this.pending=false;this.say('Your key is on the table. Pick it up.');});}
+    if(action==='please'&&this.dialogue==='host-please'){this.setState('please');this.scene?.offerKey(this.pose);this.closeDialogue();this.effects.keyJingle();this.pending=true;this.say('Asha takes the key from her hook and offers it on the table.');this.later(900,()=>{this.keyReady=true;this.pending=false;this.say('Your key is on the table. Pick it up.');});}
     if(action==='thanks'&&this.dialogue==='host-thanks'){this.setState('thanks');this.scene?.react('host','nod',this.pose);this.closeDialogue();this.say('“You’re very welcome.” Biren is waiting beside the luggage cart.');}
     if(action==='show-red'&&this.dialogue==='porter-teach'){this.scene?.showCase(false,this.pose);this.closeDialogue();this.pending=true;this.say('Biren lifts the first suitcase from the cart.');this.later(900,()=>{this.pending=false;this.showDialogue('porter-red');});}
     if((action==='answer-yes'||action==='answer-no')&&(this.dialogue==='porter-red'||this.dialogue==='porter-blue')){
@@ -152,7 +157,7 @@ class MovingInGame{
     if(action==='neighbor-wrong'&&this.dialogue==='neighbor-greet'){this.misses++;this.modal.querySelector('[role=status]')!.textContent='That means thank you. Begin with नमस्ते (namaste), like you did with Asha.';}
     if(action==='neighbor-hello'&&this.dialogue==='neighbor-greet'){this.setState('neighbor-greet');this.scene?.react('neighbor','hello',this.pose);if(this.state.parcelHeld)this.giveParcel();else this.showDialogue('neighbor-help');}
   };
-  private clearInput=()=>{this.keys.clear();this.drag=undefined;};
+  private clearInput=()=>{this.keys.clear();this.drag=undefined;this.effects.setWalking(false);this.effects.noteBump('none');};
   private keyDown=(event:KeyboardEvent)=>{if(event.key==='Escape'&&this.dialogue&&!this.pending){event.preventDefault();this.closeDialogue();return;}if(this.phase!=='explore'||this.pending||event.target instanceof HTMLElement&&event.target.closest('input,textarea,select'))return;const key=event.key.toLowerCase();if(event.target instanceof HTMLElement&&event.target.closest('button')&&(key===' '||key==='enter'))return;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)){event.preventDefault();this.keys.add(key);}if((key==='e'||key===' ')&&!event.repeat){event.preventDefault();this.interact();}};
   private keyUp=(event:KeyboardEvent)=>this.keys.delete(event.key.toLowerCase());
   private pointerDown=(event:PointerEvent)=>{if(this.phase!=='explore'||this.pending||event.button!==0)return;const target=event.target instanceof Element?event.target:null,button=target?.closest<HTMLButtonElement>('[data-arrival-move]');if(button){event.preventDefault();button.setPointerCapture(event.pointerId);this.keys.add(button.dataset.arrivalMove!);}else if(target===this.scene?.renderer.domElement){this.scene.renderer.domElement.setPointerCapture(event.pointerId);this.drag={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false};}};
@@ -160,16 +165,32 @@ class MovingInGame{
   private pointerUp=(event:PointerEvent)=>{const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>('[data-arrival-move]'):null;if(button){this.keys.delete(button.dataset.arrivalMove!);this.focusWorld();}if(this.drag?.moved)this.ignoreClicksUntil=performance.now()+300;this.drag=undefined;};
   private frame=(now:number)=>{this.raf=requestAnimationFrame(this.frame);const dt=Math.min(.05,this.last?(now-this.last)/1000:0);this.last=now;
     this.app.dataset.arrivalX=this.pose.x.toFixed(3);this.app.dataset.arrivalZ=this.pose.z.toFixed(3);this.app.dataset.arrivalYaw=this.pose.yaw.toFixed(3);
-    if(this.phase!=='explore'||this.pending){this.talk.disabled=true;return;}
+    if(this.phase==='arriving'){this.effects.setWalking(now<this.arrivingUntil,now);this.effects.noteBump('none');this.talk.disabled=true;return;}
+    if(this.phase!=='explore'||this.pending){this.effects.setWalking(false);this.effects.noteBump('none');this.talk.disabled=true;return;}
     const held=(...keys:string[])=>keys.some(key=>this.keys.has(key)),f=Number(held('w','arrowup','forward'))-Number(held('s','arrowdown','backward')),s=Number(held('d','right'))-Number(held('a','left')),turn=Number(held('arrowleft','turnleft'))-Number(held('arrowright','turnright'));
-    if(f||s||turn){this.pose.yaw+=turn*1.75*dt;const n=Math.max(1,Math.hypot(f,s));this.pose=walkArrival(this.pose,(-Math.sin(this.pose.yaw)*f+Math.cos(this.pose.yaw)*s)*2.5*dt/n,(-Math.cos(this.pose.yaw)*f-Math.sin(this.pose.yaw)*s)*2.5*dt/n,this.scene?.people());this.scene?.setPose(this.pose);}
+    const before={x:this.pose.x,z:this.pose.z};
+    if(f||s||turn){
+      this.pose.yaw+=turn*1.75*dt;
+      const n=Math.max(1,Math.hypot(f,s));
+      const people=this.scene?.people()??[];
+      const dx=f||s?(-Math.sin(this.pose.yaw)*f+Math.cos(this.pose.yaw)*s)*2.5*dt/n:0;
+      const dz=f||s?(-Math.cos(this.pose.yaw)*f-Math.sin(this.pose.yaw)*s)*2.5*dt/n:0;
+      this.effects.noteBump(arrivalBump(this.pose,dx,dz,people));
+      this.pose=walkArrival(this.pose,dx,dz,people);this.scene?.setPose(this.pose);
+    }else this.effects.noteBump('none');
+    this.effects.setWalking(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.0001,now);
     const target=this.nearest();this.talk.disabled=!target;
     const labels:Record<ArrivalTarget,string>={host:'Talk to Asha',porter:'Talk to Biren',neighbor:'Talk to Lila',key:'Pick up your key',suitcase:'Pick up your suitcase',parcel:'Pick up the parcel',door:!this.doorOpen?'Unlock your front door':this.state.bagHeld?'Carry your suitcase inside':'Your front door'};
     this.talk.textContent=target?`${labels[target]} · E`:'Walk closer to meet someone';
     const dot=this.app.querySelector<SVGCircleElement>('#arrival-map-player');if(dot){dot.setAttribute('cx',String((this.pose.x+7)*20));dot.setAttribute('cy',String((this.pose.z+5)*20));}
   };
   private fallback(){this.app.querySelector('#arrival-world')!.innerHTML=`<div class="arrival-fallback"><svg viewBox="0 0 280 240" role="img" aria-label="Courtyard map. Asha near the north doorway, Biren by the luggage cart on the right, Lila on the left."><rect width="280" height="240" rx="10" fill="#ead8ba"/><rect x="123" y="0" width="35" height="15" rx="4" fill="#6d937c"/><text x="140" y="28" text-anchor="middle">YOUR HOME</text><circle cx="140" cy="106" r="17" fill="#82aaa3"/>${Object.entries(arrivalSpots).filter(([id])=>['host','porter','neighbor','parcel'].includes(id)).map(([id,spot])=>`<circle cx="${(spot.x+7)*20}" cy="${(spot.z+5)*20}" r="6" fill="#80769b"/><text x="${(spot.x+7)*20}" y="${(spot.z+5)*20-10}" text-anchor="middle">${id==='host'?'Asha':id==='porter'?'Biren':id==='neighbor'?'Lila':'Parcel'}</text>`).join('')}<circle id="arrival-map-player" cx="140" cy="220" r="6" fill="#d78c4e"/></svg></div>`;}
-  private reset(){this.timers.forEach(timer=>clearTimeout(timer));this.timers.clear();this.clearInput();this.pending=false;this.completed=false;this.keyReady=false;this.bagReady=false;this.doorOpen=false;this.state=initialArrival();this.pose=arrivalStart();this.misses=0;this.dialogue=undefined;this.scene?.reset();this.modal.hidden=true;this.modal.replaceChildren();this.updateJournal();this.intro();this.say('A new neighborhood. Your first hello.');}
-  dispose(){this.timers.forEach(timer=>clearTimeout(timer));cancelAnimationFrame(this.raf);this.scene?.dispose();this.app.removeEventListener('click',this.click);this.app.removeEventListener('pointerdown',this.pointerDown);this.app.removeEventListener('pointermove',this.pointerMove);this.app.removeEventListener('pointerup',this.pointerUp);this.app.removeEventListener('pointercancel',this.pointerUp);this.app.removeEventListener('lostpointercapture',this.pointerUp);window.removeEventListener('resize',this.layoutConversation);window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.clearInput);document.removeEventListener('visibilitychange',this.clearInput);}
+  private reset(){this.timers.forEach(timer=>clearTimeout(timer));this.timers.clear();this.clearInput();this.effects.cancel();this.arrivingUntil=0;this.pending=false;this.completed=false;this.keyReady=false;this.bagReady=false;this.doorOpen=false;this.state=initialArrival();this.pose=arrivalStart();this.misses=0;this.dialogue=undefined;this.scene?.reset();this.modal.hidden=true;this.modal.replaceChildren();this.updateJournal();this.intro();this.say('A new neighborhood. Your first hello.');}
+  dispose(){this.timers.forEach(timer=>clearTimeout(timer));cancelAnimationFrame(this.raf);this.disposeTapControls();this.effects.dispose();this.scene?.dispose();this.app.removeEventListener('click',this.click);this.app.removeEventListener('pointerdown',this.pointerDown);this.app.removeEventListener('pointermove',this.pointerMove);this.app.removeEventListener('pointerup',this.pointerUp);this.app.removeEventListener('pointercancel',this.pointerUp);this.app.removeEventListener('lostpointercapture',this.pointerUp);window.removeEventListener('resize',this.layoutConversation);window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.clearInput);document.removeEventListener('visibilitychange',this.clearInput);}
 }
-export function startMovingIn(){const game=new MovingInGame();if(import.meta.hot)import.meta.hot.dispose(()=>game.dispose());return game;}
+export function startMovingIn(){
+  const game=new MovingInGame(),dispose=()=>game.dispose();
+  window.addEventListener('pagehide',dispose,{once:true});
+  if(import.meta.hot)import.meta.hot.dispose(()=>{window.removeEventListener('pagehide',dispose);game.dispose();});
+  return game;
+}

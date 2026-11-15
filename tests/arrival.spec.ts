@@ -73,6 +73,36 @@ test('restart cancels the in-flight key offer and resets the scene',async({page}
   expect(await page.evaluate(()=>localStorage.getItem('wayword.progress.ne.v1'))).toBeNull();
 });
 
+test('the key jingle plays once with Asha’s key-offer animation',async({page})=>{
+  await page.addInitScript(()=>{
+    const starts:{offset:number;duration?:number}[]=[];
+    (window as typeof window&{__keyStarts?:typeof starts}).__keyStarts=starts;
+    const original=AudioBufferSourceNode.prototype.start;
+    AudioBufferSourceNode.prototype.start=function(when=0,offset=0,duration?:number){
+      starts.push({offset,duration});
+      return duration===undefined?original.call(this,when,offset):original.call(this,when,offset,duration);
+    };
+  });
+  await page.goto('/');
+  await page.evaluate(async()=>{
+    const {EffectsController}=await import('/src/effects.ts'),original=EffectsController.prototype.keyJingle;
+    (window as typeof window&{__keyJingles?:number}).__keyJingles=0;
+    EffectsController.prototype.keyJingle=function(){
+      (window as typeof window&{__keyJingles:number}).__keyJingles++;
+      original.call(this);
+    };
+  });
+  await page.getByRole('button',{name:'Step into the courtyard'}).click();
+  await walkTo(page,-1.8,1.1);await face(page,-1.8,-1);await page.keyboard.press('e');
+  await page.getByRole('button',{name:'Say namaste'}).click();
+  await page.getByRole('button',{name:'Ask for the key politely'}).click();
+  expect(await page.evaluate(()=>(window as typeof window&{__keyJingles:number}).__keyJingles)).toBe(1);
+  const keyStart=await page.evaluate(()=>(window as typeof window&{__keyStarts:{offset:number;duration?:number}[]}).__keyStarts.find(start=>start.offset>6));
+  expect(keyStart?.offset).toBeCloseTo(6.82,2);expect(keyStart?.duration).toBeCloseTo(1,2);
+  await page.getByRole('button',{name:'Start over'}).click();await page.waitForTimeout(1200);
+  expect(await page.evaluate(()=>(window as typeof window&{__keyJingles:number}).__keyJingles)).toBe(1);
+});
+
 test('the courtyard has a usable map fallback without WebGL',async({page})=>{
   await page.addInitScript(()=>{const original=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type:string,...args:unknown[]){if(type.startsWith('webgl'))return null;return original.call(this,type,...args as [])} as typeof original;});
   await page.goto('/');await page.getByRole('button',{name:'Step into the courtyard'}).click();await expect(page.locator('.arrival-fallback svg')).toBeVisible();const before=await pose(page);await page.keyboard.down('w');await page.waitForTimeout(400);await page.keyboard.up('w');const after=await pose(page);expect(after.z).toBeLessThan(before.z-.5);

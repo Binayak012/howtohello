@@ -23,7 +23,9 @@ test('home, auth, language selection, map and game connect on one origin', async
   await page.getByLabel('Password', { exact: true }).fill('adventure123');
   await page.locator('#auth-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/languages\/index.html$/);
-  await page.locator('#language-continue').click();
+  await page.locator('input[name="language"][value="ne"]').check();
+  await expect(page.locator('#play-mode-dialog')).toBeVisible();
+  await page.getByRole('button', { name: /Single player: start learning Nepali/ }).click();
   await expect(page).toHaveURL(/\/map\/index.html$/);
   // Letter tracing is chapter 4 now, so chapter 1 starts straight from the map.
   await page.locator('.journey-level-1 .level-label').getByRole('link', { name: 'Start this quest', exact:false }).click();
@@ -50,11 +52,76 @@ test('direct route entry and reduced-motion navigation work', async ({ page }) =
   }
 });
 
-test('the unlocked market finale opens on its review from the map', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion:'reduce' });
-  await page.addInitScript(() => localStorage.setItem('wayword.progress.ne.v1', '["little-shop"]'));
+test('chapter clicks play once without unlocking map music during navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('wayword.progress.ne.v1', '["moving-in"]');
+    Object.defineProperty(AudioContext.prototype, 'resume', {
+      configurable: true,
+      value() {
+        sessionStorage.setItem('map-music-resumes', String(Number(sessionStorage.getItem('map-music-resumes')) + 1));
+        return Promise.resolve();
+      },
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, 'play', {
+      configurable: true,
+      value() {
+        if (this instanceof HTMLMediaElement && this.src.endsWith('/audio/map-node-click.wav')) {
+          sessionStorage.setItem('map-node-clicks', String(Number(sessionStorage.getItem('map-node-clicks')) + 1));
+        }
+        return Promise.resolve();
+      },
+    });
+  });
   await page.goto('/map/');
-  await page.getByRole('link', { name:'Play the finale', exact:false }).click();
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('map-music-resumes')))).toBe(1);
+  await page.locator('.journey-level-3 .level-node').dispatchEvent('pointerdown', { button: 0 });
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-node-clicks')))).toBe(1);
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('map-music-resumes')))).toBe(2);
+  await page.getByRole('link', { name: 'Replay level 1' }).click();
+  await expect(page).toHaveURL(/\/game\/index.html\?level=moving-in$/);
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-node-clicks')))).toBe(2);
+  expect(await page.evaluate(() => Number(sessionStorage.getItem('map-music-resumes')))).toBe(2);
+});
+
+test('map music recovers on map interaction and closes during same-page navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(AudioContext.prototype, 'resume', {
+      configurable: true,
+      value() {
+        sessionStorage.setItem('music-resumes', String(Number(sessionStorage.getItem('music-resumes')) + 1));
+        return Promise.resolve();
+      },
+    });
+    const close = AudioContext.prototype.close;
+    Object.defineProperty(AudioContext.prototype, 'close', {
+      configurable: true,
+      value() {
+        sessionStorage.setItem('music-closes', String(Number(sessionStorage.getItem('music-closes')) + 1));
+        return close.call(this);
+      },
+    });
+  });
+  await page.goto('/map/');
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('music-resumes')))).toBe(1);
+  await page.locator('.map-terrain').dispatchEvent('pointerdown', { button: 0 });
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('music-resumes')))).toBe(2);
+  await page.evaluate(() => {
+    history.pushState({}, '', '/languages/index.html');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await expect(page.locator('#language-form')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Number(sessionStorage.getItem('music-closes')))).toBeGreaterThan(0);
+});
+
+test('the unlocked market opens its number introduction from the map', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion:'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('wayword.progress.ne.v1', '["little-shop"]');
+    // The website asks for the first five vowels before the shop and the finale.
+    localStorage.setItem('wayword.tracing.ne.v1', JSON.stringify(['अ','आ','इ','ई','उ']));
+  });
+  await page.goto('/map/');
+  await page.locator('.journey-current-quest').getByRole('link', { name:'Play the finale', exact:false }).click();
   await expect(page).toHaveURL(/\/game\/index.html\?level=market$/);
   await expect(page.locator('#app')).toHaveAttribute('data-phase', 'market');
   await expect(page.locator('.finale-topics li')).toHaveCount(4);
@@ -88,12 +155,13 @@ test('chapter one completion opens chapter two and keeps the later chapters in o
     await expect(page.locator('.journey-level-5 .level-label')).toContainText('CHAPTER 05');
     await expect(page.locator('.journey-level-6 .level-label')).toContainText('FINALE');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-    const mapBounds=await page.locator('.quest-map').boundingBox(),ctaBounds=await page.locator('.journey-level-1 .level-label .button').boundingBox();
-    expect(ctaBounds!.y+ctaBounds!.height).toBeLessThan(mapBounds!.y+mapBounds!.height-12);
+    const ctaBounds=await page.locator('.journey-current-quest>.button').boundingBox();
+    expect(ctaBounds!.y+ctaBounds!.height).toBeLessThanOrEqual(844);
     await page.screenshot({path:`test-results/journey-map-${width}.png`,fullPage:true});
   }
+  // The shop needs the first five vowels traced first, so it sends you to the tracing page.
   await page.goto('/game/?level=shop');
-  await expect(page.locator('#app')).toHaveAttribute('data-phase','locked');
+  await expect(page).toHaveURL(/\/unit\/index.html$/);
   await page.goto('/game/?level=second-lesson');
   await expect(page.getByRole('heading',{name:'Unpack your suitcase.'})).toBeVisible();
   expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('wayword.progress.ne.v1')!))).toEqual(['moving-in']);
