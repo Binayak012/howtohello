@@ -1,0 +1,28 @@
+{
+  "source": "Pencil Strokes Sound Effect.mp3",
+  "regionsSeconds": [
+    [
+      0.065,
+      0.29
+    ],
+    [
+      1.005,
+      1.29
+    ],
+    [
+      2.145,
+      2.51
+    ],
+    [
+      3.165,
+      3.61
+    ],
+    [
+      4.305,
+      4.915
+    ]
+  ],
+  "crossfadeMs": 12,
+  "speed": 1,
+  "durationSeconds": 1.8700907029478457
+}

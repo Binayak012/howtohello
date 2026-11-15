@@ -44,6 +44,7 @@ export class RadioController {
   private hidden = document.hidden;
   private disposed = false;
   private stopTimer?: ReturnType<typeof setTimeout>;
+  private duckCount = 0;
   private subscribers = new Set<(state: RadioState) => void>();
 
   constructor(camera?: THREE.Camera, anchor?: THREE.Object3D) {
@@ -94,6 +95,19 @@ export class RadioController {
 
   toggle() {
     this.setEnabled(!this.enabled);
+  }
+
+  /** Quiet the radio while a short pronunciation clip plays; nestable. */
+  duck(volume = MAX_VOLUME * 0.22) {
+    if (this.disposed || this.state === 'unavailable') return;
+    this.duckCount++;
+    if (this.duckCount === 1 && this.shouldPlay() && this.sound?.isPlaying) this.fadeTo(volume, 0.18);
+  }
+
+  restoreDuck() {
+    if (this.disposed || this.duckCount === 0) return;
+    this.duckCount--;
+    if (this.duckCount === 0 && this.shouldPlay() && this.sound?.isPlaying) this.fadeTo(MAX_VOLUME, 0.35);
   }
 
   private currentState(): RadioState {
@@ -166,6 +180,7 @@ export class RadioController {
   private fadeOut(reset: boolean) {
     if (!this.sound?.isPlaying) return;
     clearTimeout(this.stopTimer);
+    this.duckCount = 0;
     this.fadeTo(0, this.hidden ? 0 : FADE_SECONDS);
     if (this.hidden) {
       this.sound.pause();

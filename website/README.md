@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5174/. The landing page is `/`, log-in is `/auth/`, sign-up is `/auth/?mode=signup`, language selection is `/languages/`, the Basic introduction is `/unit/`, and the playable game is `/game/`.
+Open http://127.0.0.1:5174/. The landing page is `/`, log-in is `/auth/`, sign-up is `/auth/?mode=signup`, language selection is `/languages/`, the writing side quest is `/unit/`, and the playable game is `/game/`.
 
 Before the dev server starts, `predev` builds the root game into the ignored `public/game/` folder. No second server is needed. If changing game source while the website server is running, run `npm run build:game` in `website/` and reload the game.
 
@@ -38,9 +38,9 @@ Complete the shop by collecting the packed bag and approaching the closed door. 
 
 Progression checks: from the repository root, run `node --experimental-strip-types --test website/tests/progression.test.ts`.
 
-## Door-unlock experiment
+## Writing practice side quest
 
-The merged site keeps port 5174. The map’s Basic introduction opens `/unit/index.html`. Trace the first five Nepali vowels (अ आ इ ई उ) in order, checking each letter. Coverage and precision against the displayed glyph are checked locally; this is guided tracing, not freehand recognition. A keyboard alternative accepts the same sequence.
+The map links to writing practice at `/unit/index.html`. Lessons 1–4 do not require tracing. Practice any of अ आ इ ई उ with the pencil tutorial; each accepted trace is saved independently and users resume the first unfinished letter. Completion of all five is the prerequisite for future Lesson 5. Set 2 (ऊ ए ऐ ओ औ) is required before future Lesson 9. Extra practice covers अं अः ऋ ॠ, without adding another lesson gate. The teaching sequence follows the owner’s supplied chart. All 14 vowels have guided paths; only the original five have recorded pronunciation, with the remaining speakers marked as awaiting recordings. These rules live in `src/tracing-progress.ts` and are checked by the map and direct game entry. Old door unlocks and demo skips do not count as writing progress. Typed practice remains available but does not record a trace.
 
 Successful entry opens the door and saves the unlock on this browser (with session-storage fallback). Basic introduces the existing four-chapter story: Your First Hello, the reserved second lesson, The Little Shop, and The Morning Market finale. Writing practice is separate from chapter two. Fresh direct entry to the hosted game returns to Basic until unlocked; existing chapter saves retain access. The root standalone game remains independently runnable. The merged build scripts call `build:game` directly to avoid recursively invoking the complete website build.
 
@@ -50,7 +50,7 @@ Tests: `node --experimental-strip-types --test website/tests/*.test.ts` from the
 
 ## Writing tutorial
 
-The door first opens a short tutorial explaining the gold starting dot, holding the pointer to draw, and lifting between strokes. Each letter offers a full animated demonstration and numbered stroke replays. The animation uses the same teal-and-gold pencil SVG as login (`src/pencil.ts`). Reduced-motion users get static steps. Replay keeps existing user ink; demo ink never enters validation.
+Writing practice first opens a short tutorial explaining the gold starting dot, holding the pointer to draw, and lifting between strokes. Each letter offers a full animated demonstration and numbered stroke replays. The animation uses the same teal-and-gold pencil SVG as login (`src/pencil.ts`). Reduced-motion users get static steps. Replay keeps existing user ink; demo ink never enters validation.
 
 Original simplified handwriting paths in `src/writing-strokes.ts` are shared by the canvas guide, demonstration, and checking target. The trace check now also requires coverage of each stroke, so omitting a short headline cannot pass just by covering the longer body. This is guided practice, not a handwriting-recognition or strict stroke-order assessment.
 
@@ -79,3 +79,13 @@ The tracing heading has a speaker button and a short Latin-letter pronunciation 
 No speech service or browser-installed voice is used for playback. Switching letters or leaving the tracing screen stops the audio. Earlier synthetic MP3s and their generation script remain as unused prototype assets; the active player references only the user’s WAV files.
 
 Written hints are approximate. Reference: https://pressbooks.bccampus.ca/nepali/chapter/chapter-1-unit-2-vowel-letters/
+
+## Map music
+
+The map has an original, low-volume, 32-beat menu loop (a nostalgic music-box melody, warm retro chords, gently swaying arpeggios, and short stereo reverb at 68 BPM), generated locally with Web Audio. The floating music button remembers the on/off choice separately from transition sound. Browser autoplay rules may require a click to begin; the button then reads Play music. Playback suspends while the tab is hidden and fades/stops when leaving the map. No external music requests are made.
+
+## Temporary hackathon skip
+
+The tracing screen and tutorial include **Skip for demo**, which now returns to the map without recording any traces or bypassing future writing prerequisites. Set `VITE_DEMO_SKIP_TRACING=false` to hide this temporary control.
+
+Tracing uses `public/audio/pencil-strokes-continuous.wav`, edited from the owner-provided MP3 by removing the five long silent gaps and applying 12ms joins. The unedited MP3 is kept alongside it. Playback stays at its natural pace, playing only while the pencil moves and pausing between strokes. The Effects toggle remembers the user's choice and pauses tracing/celebration effects; pronunciation remains separately available. The original Downloads recording is unchanged.

@@ -31,3 +31,34 @@ export const writingLessons: WritingLesson[] = [
     { path: 'M98 80 L183 80', start: [98, 80], instruction: 'Lift your pencil and finish with the headline from left to right.' },
   ] },
 ];
+
+// Continue in the order of the owner's complete vowel chart. The same paths
+// drive both the animated pencil and coverage validation.
+const headline: WritingStroke = {path:'M98 80 L183 80',start:[98,80],instruction:'Lift the pencil and draw the headline from left to right.'};
+const upperMark: WritingStroke = {path:'M160 79 C154 59 138 47 121 43',start:[160,79],instruction:'Lift the pencil. From the headline, curve upward and left to add the vowel mark.'};
+const secondUpperMark: WritingStroke = {path:'M191 79 C183 55 167 42 151 37',start:[191,79],instruction:'Lift again. Add the second upward curve beside the first.'};
+// Keep each pen-down stroke separate so the starting-dot tutorial is accurate.
+const eStrokes: WritingStroke[] = [
+  {path:'M117 80 L117 115 C116 131 135 143 151 146 L166 172',start:[117,80],instruction:'Start at the left stem. Move down and sweep right into the lower tail.'},
+  {path:'M163 80 L163 119 C163 137 151 141 141 140',start:[163,80],instruction:'Lift the pencil. Draw the right stem down and curve left into the body.'},
+  headline,
+];
+const aaStrokes = writingLessons[1].strokes;
+const aStrokes = writingLessons[0].strokes;
+const dot = (x:number,y:number):WritingStroke => ({path:`M${x} ${y} L${x+.5} ${y}`,start:[x,y],instruction:'Lift the pencil. Touch down briefly to make this dot.'});
+const riStrokes: WritingStroke[] = [
+  {path:'M91 80 C122 76 138 87 129 102 C123 111 110 115 101 119 C128 123 139 141 151 156 L164 174',start:[91,80],instruction:'Begin under the headline. Curve right, return toward the middle, and sweep diagonally down to the right.'},
+  {path:'M138 107 L183 107 C198 107 198 127 184 132 L163 132 C183 134 196 145 189 160 C182 173 162 171 152 162',start:[138,107],instruction:'Lift the pencil. Draw the right-hand loop, then continue into its lower curve.'},
+  {path:'M77 80 L205 80',start:[77,80],instruction:'Finish with the headline, from left to right.'},
+];
+writingLessons.push(
+  {letter:'ऊ',strokes:[...writingLessons[4].strokes.slice(0,1),{path:'M161 118 C188 111 194 126 183 136 C174 143 187 157 202 151',start:[161,118],instruction:'Lift your pencil. Add the small right-hand curl, curving out and back.'},headline]},
+  {letter:'ए',strokes:eStrokes},
+  {letter:'ऐ',strokes:[...eStrokes,upperMark]},
+  {letter:'ओ',strokes:[...aaStrokes,upperMark]},
+  {letter:'औ',strokes:[...aaStrokes,upperMark,secondUpperMark]},
+  {letter:'अं',strokes:[...aStrokes,dot(164,52)]},
+  {letter:'अः',strokes:[...aStrokes,dot(205,115),dot(205,151)]},
+  {letter:'ऋ',strokes:riStrokes},
+  {letter:'ॠ',strokes:[...riStrokes,{path:'M196 112 C219 106 223 126 209 137 C198 145 207 163 220 160',start:[196,112],instruction:'Lift the pencil. Add the outer curl on the right for ॠ.'}]},
+);

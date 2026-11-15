@@ -2,7 +2,8 @@ import type { ShopScene } from './scene';
 import { numbers } from './numbers';
 import { pack } from './pack';
 import { completeLevel } from './progression';
-import { marketActivities, errandWords, errandNames, pickColors, marketStart, nearbyActivity, walkMarket, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
+import { marketActivities, errandWords, errandNames, pickColors, marketStart, nearbyActivity, walkMarket, marketBump, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
+import type { EffectsController } from './effects';
 import './market-words.css';
 
 /** A picture for each errand, so the street needs no English labels. */
@@ -57,7 +58,7 @@ export class MarketExplorer {
   /** Teddy errand: 0 walk to the bakery, 1 look behind the planter, 2 pick it up, 3 bring it back. */
   private familyStep=0;
 
-  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void) {
+  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void, private effects:EffectsController) {
     try {this.completed=new Set(readMarketVisits(localStorage));}catch{/* Exploration works without storage. */}
     host.hidden=false;host.dataset.mode='roam';host.dataset.peek='false';
     host.innerHTML=`<aside class="market-journal word-strip" aria-label="What to do now"><p class="eyebrow" id="market-step-count"></p><p class="market-instruction" id="market-instruction" aria-live="polite"></p><p id="market-progress" class="sr-only"></p><div class="errand-chips">${marketActivities.map(activity=>`<button data-track="${activity.id}" aria-pressed="false" aria-label="${errandNames[activity.id]}: ${activity.name}${activity.required?'':' (optional)'}" ${activity.required?'':'data-optional="true"'}><span class="chip-icon" aria-hidden="true">${icons[activity.id]}</span><span class="chip-word" lang="ne">${errandWords[activity.id].replace(' teddy','')}</span><i class="chip-done" aria-hidden="true">✓</i></button>`).join('')}</div></aside><aside class="market-help" aria-label="Help"><div class="market-hint" role="status" hidden><p id="market-hint-text"></p><button class="hint-close" data-market-action="hint-close" aria-label="Close hint">✕</button></div><div class="strip-tools"><button class="help-main" data-market-action="peek" aria-label="Hint"><span aria-hidden="true">💡</span> Hint</button><button data-market-action="face-target" aria-label="Turn me toward it" title="Turn toward your goal">🧭</button><button class="strip-review" data-market-action="review" aria-label="Review numbers 1–5" title="Review numbers">१–५</button></div></aside><div class="market-waypoint" aria-hidden="true"><span class="wp-icon"></span><span class="cue-arrow"><i>↑</i></span><span class="wp-word"><strong lang="ne"></strong><span class="latin-guide"></span><small class="gloss"></small></span></div><span class="market-crosshair" aria-hidden="true">+</span><button id="market-talk" class="market-talk" disabled aria-label="Approach a neighbor to talk"></button><p class="market-roam-status" role="status" aria-live="polite"></p><div class="word-toast" role="status" aria-live="polite" hidden></div><div class="market-touch" aria-label="Market movement controls"><button data-move="turnleft" aria-label="Look left">↶</button><button data-move="forward" aria-label="Walk forward">↑</button><button data-move="turnright" aria-label="Look right">↷</button><button data-move="left" aria-label="Walk left">←</button><button data-move="backward" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div><p class="market-keys"><kbd>W A S D</kbd> walk · <kbd>← →</kbd> turn · <kbd>E</kbd> talk</p><section class="market-dialogue word-bubble" role="dialog" aria-modal="false" aria-labelledby="market-dialogue-title" hidden></section>`;
@@ -78,7 +79,7 @@ export class MarketExplorer {
   }
   private focusWorld(){if(this.canvas)this.canvas.focus({preventScroll:true});else this.prompt.focus({preventScroll:true});}
   setPaused(paused:boolean){this.paused=paused;this.clearKeys();this.host.hidden=paused;if(!paused)this.focusWorld();}
-  private clearKeys=()=>{this.keys.clear();this.drag=undefined;};
+  private clearKeys=()=>{this.keys.clear();this.drag=undefined;this.effects.setWalking(false);this.effects.noteBump('none');};
   private keyDown=(event:KeyboardEvent)=>{
     if(this.paused)return;
     if(event.key==='Escape'&&this.conversation){event.preventDefault();this.closeConversation();return;}
@@ -108,18 +109,22 @@ export class MarketExplorer {
   private frame=(now:number)=>{
     this.raf=requestAnimationFrame(this.frame);
     const dt=Math.min(.05,this.last?(now-this.last)/1000:0);this.last=now;
-    if(this.paused||this.conversation)return;
+    if(this.paused||this.conversation){this.effects.setWalking(false);this.effects.noteBump('none');return;}
     const down=(...keys:string[])=>keys.some(key=>this.keys.has(key));
     const forward=Number(down('w','arrowup','forward'))-Number(down('s','arrowdown','backward'));
     const strafe=Number(down('d','right'))-Number(down('a','left'));
     const turn=Number(down('arrowleft','turnleft'))-Number(down('arrowright','turnright'));
+    const before={x:this.pose.x,z:this.pose.z};
     if(forward||strafe||turn){
       this.pose.yaw+=turn*1.75*dt;
+      const people=this.scene?.market.peopleObstacles();
       const norm=Math.max(1,Math.hypot(forward,strafe));
-      const dx=(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*2.8*dt/norm;
-      const dz=(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*2.8*dt/norm;
-      this.pose=walkMarket(this.pose,dx,dz,this.scene?.market.peopleObstacles());this.scene?.setMarketPose(this.pose);
-    }
+      const dx=forward||strafe?(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*2.8*dt/norm:0;
+      const dz=forward||strafe?(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*2.8*dt/norm:0;
+      this.effects.noteBump(marketBump(this.pose,dx,dz,people));
+      this.pose=walkMarket(this.pose,dx,dz,people);this.scene?.setMarketPose(this.pose);
+    }else this.effects.noteBump('none');
+    this.effects.setWalking(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.0001,now);
     this.host.dataset.marketX=this.pose.x.toFixed(3);this.host.dataset.marketZ=this.pose.z.toFixed(3);this.host.dataset.marketYaw=this.pose.yaw.toFixed(3);
     this.near=nearbyActivity(this.pose);
     const canPickToy=this.toyNearby()&&!this.completed.has('family')&&!this.tasks.get('family')?.carryingToy;
@@ -151,9 +156,17 @@ export class MarketExplorer {
     const button=event.target instanceof Element?event.target.closest<HTMLButtonElement>('button'):null;if(!button||button.disabled)return;
     if(button.dataset.move&&event.detail===0&&!this.conversation){
       const move=button.dataset.move;
-      if(move==='turnleft'||move==='turnright')this.pose.yaw+=(move==='turnleft'?1:-1)*.4;
-      else{const forward=move==='forward'?1:move==='backward'?-1:0,strafe=move==='right'?1:move==='left'?-1:0;this.pose=walkMarket(this.pose,(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*.65,(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*.65,this.scene?.market.peopleObstacles());}
-      this.scene?.setMarketPose(this.pose);return;
+      const before={x:this.pose.x,z:this.pose.z};
+      if(move==='turnleft'||move==='turnright'){this.pose.yaw+=(move==='turnleft'?1:-1)*.4;this.effects.noteBump('none');}
+      else{
+        const people=this.scene?.market.peopleObstacles();
+        const forward=move==='forward'?1:move==='backward'?-1:0,strafe=move==='right'?1:move==='left'?-1:0;
+        const dx=(-Math.sin(this.pose.yaw)*forward+Math.cos(this.pose.yaw)*strafe)*.65;
+        const dz=(-Math.cos(this.pose.yaw)*forward-Math.sin(this.pose.yaw)*strafe)*.65;
+        this.effects.noteBump(marketBump(this.pose,dx,dz,people));
+        this.pose=walkMarket(this.pose,dx,dz,people);
+      }
+      this.scene?.setMarketPose(this.pose);if(Math.hypot(this.pose.x-before.x,this.pose.z-before.z)>.001)this.effects.footstep();return;
     }
     if(button.dataset.track){this.tracked=button.dataset.track as ActivityId;this.markTracked();this.progressed();this.focusWorld();return;}
     const action=button.dataset.marketAction;

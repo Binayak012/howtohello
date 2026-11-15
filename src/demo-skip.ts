@@ -1,4 +1,5 @@
 import { completeLevel, journey, levelHref, type LevelId } from './progression';
+import { saveTracedLetter, writingSets } from './tracing-progress';
 
 /** Set to false to remove the demo chapter skipper everywhere. */
 export const DEMO_SKIP = true;
@@ -20,6 +21,9 @@ export function prepareChapter(storage: Pick<Storage, 'getItem' | 'setItem' | 'r
   storage.setItem('wayword.progress.ne.v1', '[]');
   for (const level of journey) { if (level.id === id) break; completeLevel(storage, level.id); }
   for (const key of ['wayword.market-visits.ne.v1', 'wayword.wallet.ne.v1', 'wayword.numbers.ne.v1']) storage.removeItem(key);
+  // From the shop onward the website also asks for the first five vowels to be traced.
+  const chapter = journey.find(level => level.id === id)!.chapter;
+  for (const set of writingSets) if (chapter >= set.beforeLesson) set.letters.forEach(letter => saveTracedLetter(storage, letter, set.id));
 }
 
 /** A small corner button for demos: jump straight to any chapter. */

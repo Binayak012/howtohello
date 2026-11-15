@@ -24,25 +24,48 @@ const isLanding = !isAuth && !isLanguages && !isMap && !isUnit;
 let stopAuthGuide = () => {};
 let stopAuthEntrance = () => {};
 let stopMap = () => {};
+let stopLanguages = () => {};
 let stopUnit = () => {};
 if (isUnit) {
 stopUnit = renderBasicUnit(app, brand);
 } else if (isMap) {
 stopMap = renderLevelMap(app, brand);
 } else if (isLanguages) {
-renderLanguages(app, brand);
+stopLanguages = renderLanguages(app, brand);
 } else if (isLanding) {
 app.innerHTML = `
 <a class="skip" href="#main">Skip to content</a>
 <header class="nav wrap">${brand}<nav aria-label="Main navigation"><a class="nav-story" href="#how-it-works">How it works</a><a class="nav-story" href="#first-adventure">A peek inside</a><a href="/auth/">Log in <span aria-hidden="true">↗</span></a></nav></header>
 <main id="main">
 <section class="hero wrap"><div class="hero-copy"><p class="eyebrow"><span class="tiny-star">✦</span> THE LANGUAGE-LEARNING GAME YOU STEP INSIDE.</p><h1>Play a game.<br>Learn a<br><span class="world">language.</span></h1><p class="intro">Wayword is an interactive language-learning game. Explore a 3D world, complete quests, and use new words to move the story forward.</p>${primary}<p class="micro">First-person gameplay · Real language practice</p><div class="people"><span class="avatar"><img src="/assets/student.svg" alt=""></span><span class="avatar"><img src="/assets/traveler-gesture.svg" alt=""></span><span class="avatar"><img src="/assets/shopkeeper-gesture.svg" alt=""></span><p>Meet your neighbors.<br><strong>Become part of the story.</strong></p></div></div>
-<div class="hero-art"><span class="spark spark-one" aria-hidden="true">✦</span><div class="scene-shell"><div class="scene-topline"><span class="live-dot"></span> QUEST PREVIEW · THE LITTLE SHOP <span>05</span></div><div class="quest-viewport"><img class="shop-scene" src="/assets/shop-scene-laptop.svg" alt="A warm neighborhood shop with wooden shelves of fruit and books, and a friendly shopkeeper."><div class="quest-overlay"><span class="quest-marker" aria-hidden="true">✦</span><div><small>YOUR MISSION</small><strong>A little errand in a new neighborhood</strong><p>Find your supplies · Bring them to the counter</p></div></div></div><div class="scene-caption"><span class="round-arrow" aria-hidden="true">↗</span><div><strong>The little shop</strong><small>Explore. Collect. Find your words.</small></div><span class="tag">CHAPTER 05</span></div></div><div class="floating-note"><span aria-hidden="true">✧</span> You’re the traveler.<br><strong>This is your story.</strong></div><img class="traveler" src="/assets/traveler-gesture.svg" alt="Your traveler guide waving hello"><span class="spark spark-two" aria-hidden="true">✦</span></div></section>
+<div class="hero-art"><span class="spark spark-one" aria-hidden="true">✦</span><div class="scene-shell"><div class="quest-preview-switch" aria-label="Choose a quest preview"><button type="button" data-preview="shop" aria-pressed="true">The little shop</button><button type="button" data-preview="street" aria-pressed="false">The street quest</button></div><div class="scene-topline"><span class="live-dot"></span> QUEST PREVIEW · THE MORNING MARKET <span>06</span></div><div class="quest-viewport"><img class="shop-scene" src="/assets/market-scene.svg" alt="A sunny neighborhood market with fruit and flower stalls, friendly sellers, and a traveler exploring the footpath."><div class="quest-overlay"><span class="quest-marker" aria-hidden="true">✦</span><div><small>YOUR MISSION</small><strong>A market full of little missions</strong><p>Meet the sellers · Count your fruit · Pick a bouquet</p></div></div></div><div class="scene-caption"><span class="round-arrow" aria-hidden="true">↗</span><div><strong>The morning market</strong><small>Explore. Meet. Count. Complete your quests.</small></div><span class="tag">CHAPTER 06</span></div></div><div class="preview-companions"><div class="floating-note"><span aria-hidden="true">✧</span> You’re the traveler.<br><strong>This is your story.</strong></div><img class="traveler" src="/assets/traveler-gesture.svg" alt="Your traveler guide waving hello"></div><span class="spark spark-two" aria-hidden="true">✦</span></div></section>
 <div class="ribbon"><span>STEP INTO THE WORLD</span><i>✦</i><span>TAKE ON A QUEST</span><i>✦</i><span>LEARN WITH EVERY MOVE</span><i>✦</i><span>PLAY AT YOUR OWN PACE</span></div>
 <section id="how-it-works" class="how wrap"><div class="section-heading"><p class="eyebrow">HOW YOU PLAY. HOW YOU LEARN.</p><h2>Your next level?<br><span>A new language.</span></h2><p>Learn the words, then use them in the game.<br>Every quest turns language practice into something you can do.</p></div><div class="steps"><article><span class="step-number">01</span><div class="step-icon lavender" aria-hidden="true">Aa</div><h3>Learn your quest’s words</h3><p>A new place. A small mission. Meet the words that will help you take it on, then step inside.</p></article><article><span class="step-number">02</span><div class="step-icon yellow" aria-hidden="true">↱</div><h3>Step into the game</h3><p>Walk through the world, meet its characters, and interact with what you find. Put each new word into action.</p></article><article><span class="step-number">03</span><div class="step-icon mint" aria-hidden="true">✓</div><h3>Complete the quest</h3><p>Find what you need, finish the errand, and see your progress. Every little win is language you’ve used.</p></article></div></section>
 <section id="first-adventure" class="adventure wrap"><div class="adventure-portrait"><img src="/assets/shopkeeper-gesture.svg" alt="A smiling shopkeeper in a teal apron"><span class="hello">Come on in!</span><span class="portrait-star" aria-hidden="true">✦</span></div><div><p class="eyebrow">CHAPTER FIVE · THE LITTLE SHOP</p><h2>A little errand.<br>A language adventure.</h2><p>The shopkeeper is waiting, and you have a list to fill. Step between the shelves, pick up your supplies, and bring them to the counter. You’re learning a language with every move.</p><p class="demo-context">Begin with a hello in your new courtyard, then find your way through the neighborhood. This demo starts with Nepali.</p><div class="lesson-facts"><span>↗ First-person exploring</span><span>⌨ Keyboard & tap</span><span>✦ Your own pace</span></div>${primary}</div></section>
 <section class="closing wrap"><p class="eyebrow">THERE’S A WHOLE WORLD OUT THERE</p><h2>Ready to play<br>your way to a new language?</h2>${primary}<p class="micro">Your first quest is waiting.</p></section></main>
 <footer class="footer wrap">${brand}<p>New words. New worlds. Your story.</p><a href="#main">Back to top ↑</a></footer>`;
+const previews = {
+  shop: {title:'The little shop', chapter:'05', image:'shop-scene-laptop.svg', alt:'A cozy shop with fruit, books, and a friendly shopkeeper.', mission:'Your first little errand', task:'Find your supplies · Bring them to the counter', caption:'Explore. Collect. Find your words.'},
+  street: {title:'The street quest', chapter:'06', image:'market-scene.svg', alt:'A sunny street market with fruit and flower sellers and a traveler exploring.', mission:'A neighborhood full of little missions', task:'Meet the sellers · Count your fruit · Pick a bouquet', caption:'Meet your neighbors. Put your words into play.'}
+};
+function selectPreview(key: keyof typeof previews) {
+  const preview = previews[key];
+  const shell = app.querySelector<HTMLElement>('.scene-shell')!;
+  shell.querySelector('.scene-topline')!.innerHTML = `<span class="live-dot"></span> QUEST PREVIEW · ${preview.title.toUpperCase()} <span>${preview.chapter}</span>`;
+  const image = shell.querySelector<HTMLImageElement>('.shop-scene')!;
+  image.src = `/assets/${preview.image}`; image.alt = preview.alt;
+  shell.querySelector('.quest-overlay strong')!.textContent = preview.mission;
+  shell.querySelector('.quest-overlay p')!.textContent = preview.task;
+  shell.querySelector('.scene-caption strong')!.textContent = preview.title;
+  shell.querySelector('.scene-caption small')!.textContent = preview.caption;
+  shell.querySelector('.tag')!.textContent = `CHAPTER ${preview.chapter}`;
+  shell.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.preview === key)));
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    shell.querySelector('.quest-viewport')!.animate([{opacity:.4,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:300,easing:'ease-out'});
+  }
+}
+app.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach(button => button.onclick = () => selectPreview(button.dataset.preview as keyof typeof previews));
+selectPreview('shop');
 } else {
 let mode = new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup' : 'login';
 function renderAuth() {
@@ -102,7 +125,7 @@ const stopAdventureTransition = setupAdventureTransition(isAuth, destination => 
   window.scrollTo({ top: 0, behavior: 'instant' });
   renderPage();
 });
-disposePage = () => { stopUnit(); stopMap(); stopAuthEntrance(); stopAuthGuide(); stopScrollWords(); stopAdventureTransition(); };
+disposePage = () => { stopLanguages(); stopUnit(); stopMap(); stopAuthEntrance(); stopAuthGuide(); stopScrollWords(); stopAdventureTransition(); };
 }
 renderPage();
 window.addEventListener('popstate', renderPage);
