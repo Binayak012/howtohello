@@ -14,6 +14,7 @@ import { atCheckout, atShopDoor, baseBeats, facedRack, racks, rackFor, relativeT
 import { askNeighbor, neighborAiAvailable, type NeighborTurn } from './shopkeeper-ai';
 import { EffectsController } from './effects';
 import { createAnswerFeedback } from './answer-feedback';
+import { MarketAudioController } from './market-audio';
 import { pack } from './pack';
 import { speakerIcon, WordPronouncer } from './pronunciation';
 import { RadioController, type RadioState } from './radio';
@@ -86,10 +87,17 @@ catch { el('scene').innerHTML = '<div class="scene-fallback">Your shop map<div i
 export const radio = new RadioController(scene?.camera, scene?.radioAnchor);
 export const effects = new EffectsController(radio.listener, scene?.keeper);
 const answerFeedback = createAnswerFeedback(() => effects.soundsEnabled);
+export const marketAudio = new MarketAudioController(radio.listener, {
+  isSpeechBusy: () => effects.isSpeechBusy() || effects.isCharacterSpeaking(),
+});
 const pronouncer = new WordPronouncer({
-  onPlayingChange: playing => effects.setSpeechBusy(playing),
-  duckRadio: () => radio.duck(),
-  restoreRadio: () => radio.restoreDuck(),
+  listener: radio.listener,
+  onPlayingChange: playing => {
+    effects.setSpeechBusy(playing);
+    if (!playing) marketAudio.flushPendingGiggle();
+  },
+  duckRadio: () => { radio.duck(); marketAudio.duck(); },
+  restoreRadio: () => { radio.restoreDuck(); marketAudio.restoreDuck(); },
   isCharacterSpeaking: () => effects.isCharacterSpeaking(),
 });
 if(scene)scene.onPlayerWalking=walking=>effects.setWalking(walking);
@@ -579,8 +587,13 @@ el('market-replay').onclick = restart;
 function startExploring() {
   numberLesson?.dispose();numberLesson=undefined;
   el('market-arrival').hidden=true;
+  effects.useMarketFootsteps(true);
+  marketAudio.attachChild(scene?.market.childBody());
+  marketAudio.attachBicycle(scene?.market.bicycleBody());
+  if (scene) scene.market.onBicyclePass = (riding, progress) => marketAudio.noteBicycle(riding, progress);
+  marketAudio.setActive(true);
   if(explorer) explorer.setPaused(false);
-  else explorer=new MarketExplorer(el('market-roam'),scene,openNumberLesson,effects);
+  else explorer=new MarketExplorer(el('market-roam'),scene,openNumberLesson,effects,pronouncer,marketAudio);
 }
 function openNumberLesson() {
   if (phase !== 'market' || numberLesson) return;
@@ -620,6 +633,10 @@ function restart() {
   run++; clearTimeout(advanceTimer); clearTimeout(idleTimer); clearTimeout(fallbackTimer); clearTimeout(stuckTimer);
   journeyTimers.forEach(clearTimeout); journeyTimers = [];
   pronouncer.stop();
+  marketAudio.setActive(false);
+  marketAudio.setToyMissing(false);
+  if (scene) scene.market.onBicyclePass = undefined;
+  effects.useMarketFootsteps(false);
   effects.cancel();
   askHistory.length = 0; askMisses = 0; el('ask-reply').replaceChildren(); el('ask-status').textContent = ''; el('ask-panel').hidden = true;
   phase = 'story'; player = start(); practiceIndex = 0; index = 0; misses = 0; helped = false; busy = false; hintLevel = 0; stock = createStock(); outcomes = [];
@@ -684,7 +701,7 @@ window.addEventListener('keydown', event => {
     }
   }
 });
-window.addEventListener('pagehide', () => { answerFeedback.dispose(); pronouncer.dispose(); disposeTapControls(); effects.dispose(); radio.dispose(); }, { once: true });
+window.addEventListener('pagehide', () => { answerFeedback.dispose(); pronouncer.dispose(); marketAudio.dispose(); disposeTapControls(); effects.dispose(); radio.dispose(); }, { once: true });
 
 restart();
 // Resume an unlocked market from the map without replaying the shop tutorial.

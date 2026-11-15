@@ -35,9 +35,10 @@ The softly descending “try again” notes and filtered pencil-on-paper texture
 are original Web Audio synthesis in `website/src/trace-celebration.ts`. They
 use no downloaded recordings or third-party audio assets.
 
-## Shop word pronunciations (`ne/namaste.wav`, `agadi.wav`, `baaya.wav`, `daaya.wav`, `pachhadi.wav`)
+## Shop and market word pronunciations (`ne/*.wav`)
 
-Mirrored from the game’s `public/assets/audio/ne/` clips for website packaging.
+Mirrored from the game’s `public/assets/audio/ne/` clips for website packaging:
+`namaste`, `agadi`, `baaya`, `daaya`, `pachhadi`, `dhanyabaad`, `hunchha`.
 Synthesized with Piper’s Nepali `ne_NP-chitwan-medium` voice (MIT model; CC0
 training data). See `../assets/audio/CREDITS.md` in the game tree for hashes
 and full notes. English TTS was not used.

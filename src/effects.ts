@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 
-type EffectName = 'bag' | 'footstep' | 'key' | 'tap' | 'shopkeeperHmm' | 'shopkeeperPlayful' | 'bottle' | 'fruit' | 'scan' | 'complete' | 'cheer' | 'bumpOops' | 'bumpOuch' | 'bumpExcuse';
+type EffectName = 'bag' | 'fabric' | 'footstep' | 'key' | 'tap' | 'shopkeeperHmm' | 'shopkeeperPlayful' | 'bottle' | 'fruit' | 'scan' | 'complete' | 'cheer' | 'bumpOops' | 'bumpOuch' | 'bumpExcuse';
 export type BumpKind = 'none' | 'object' | 'person';
 
 const URLS: Record<Exclude<EffectName, 'tap'>, string> = {
   bag: `${import.meta.env.BASE_URL}assets/audio/bag_rustle.mp3`,
+  fabric: `${import.meta.env.BASE_URL}assets/audio/fabric_rustle.mp3`,
   footstep: `${import.meta.env.BASE_URL}assets/audio/footstep.mp3`,
   key: `${import.meta.env.BASE_URL}assets/audio/key_jingle.mp3`,
   shopkeeperHmm: `${import.meta.env.BASE_URL}assets/audio/shopkeeper_hmm.mp3`,
@@ -22,6 +23,9 @@ const URLS: Record<Exclude<EffectName, 'tap'>, string> = {
 const TAP_ENABLED_KEY = 'wayword.tap-sounds.enabled';
 const FOOTSTEP_ONSET = 0.372;
 const FOOTSTEP_DURATION = 0.16;
+const FOOTSTEP_VOLUME = 0.1;
+/** Quieter steps on the open market street so ambience stays on top. */
+const MARKET_FOOTSTEP_VOLUME = 0.035;
 const BUMP_COOLDOWN_MS = 2000;
 
 export class EffectsController {
@@ -34,6 +38,7 @@ export class EffectsController {
   private generation = 0;
   private walking = false;
   private tapEnabled = true;
+  private footstepVolume = FOOTSTEP_VOLUME;
   private nextStepAt = 0;
   private step = 0;
   private reaction = 0;
@@ -67,11 +72,12 @@ export class EffectsController {
     try { this.tapEnabled = localStorage.getItem(TAP_ENABLED_KEY) !== 'false'; } catch { /* Tap sounds still work without storage. */ }
     void this.load('footstep');
     void this.load('key');
+    void this.load('fabric');
     void this.load('bumpOops');
     void this.load('bumpOuch');
     void this.load('bumpExcuse', true);
     for (const name of Object.keys(URLS) as (Exclude<EffectName, 'tap'>)[]) {
-      if (name === 'footstep' || name === 'key' || name === 'bumpOops' || name === 'bumpOuch' || name === 'bumpExcuse') continue;
+      if (name === 'footstep' || name === 'key' || name === 'fabric' || name === 'bumpOops' || name === 'bumpOuch' || name === 'bumpExcuse') continue;
       void this.load(name);
     }
     document.addEventListener('visibilitychange', this.onVisibilityChange);
@@ -93,10 +99,23 @@ export class EffectsController {
     this.speechBusy = busy;
   }
 
+  isSpeechBusy() {
+    return this.speechBusy;
+  }
+
+  /** Soften or restore footsteps (e.g. quieter on the market street). */
+  setFootstepVolume(volume: number) {
+    this.footstepVolume = Math.max(0, volume);
+  }
+
+  useMarketFootsteps(enabled: boolean) {
+    this.footstepVolume = enabled ? MARKET_FOOTSTEP_VOLUME : FOOTSTEP_VOLUME;
+  }
+
   footstep() {
     if (this.hasActive('footstep')) return;
     const playbackRate = this.step++ % 2 ? 1.035 : 0.97;
-    void this.play('footstep', 0.1, FOOTSTEP_ONSET, FOOTSTEP_DURATION, playbackRate);
+    void this.play('footstep', this.footstepVolume, FOOTSTEP_ONSET, FOOTSTEP_DURATION, playbackRate);
   }
 
   bindTapControls(root:HTMLElement,button:HTMLButtonElement){
@@ -151,6 +170,12 @@ export class EffectsController {
 
   bagRustle() {
     void this.play('bag', 0.11, 0.05, 0.85, 1);
+  }
+
+  /** Soft plush/fabric rustle for the lost teddy — once per successful pickup. */
+  fabricRustle() {
+    if (this.hasActive('fabric')) return;
+    void this.play('fabric', 0.07, 0.35, 0.42, 1);
   }
 
   keyJingle() {

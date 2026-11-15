@@ -5,7 +5,29 @@ import { completeLevel } from './progression';
 import { marketActivities, errandWords, errandNames, pickColors, marketStart, nearbyActivity, walkMarket, marketBump, readMarketVisits, marketVisitsKey, lostToy, type MarketTask, type MarketActivity, type MarketPose, type ActivityId } from './market-world';
 import type { EffectsController } from './effects';
 import { askNeighbor, neighborAiAvailable, type NeighborTurn, type NeighborReply } from './shopkeeper-ai';
+import type { MarketAudioController } from './market-audio';
+import { speakerIcon, type PronunciationId, type VoiceSpeakerId, type WordPronouncer } from './pronunciation';
 import './market-words.css';
+
+/** Reply actions that speak a bundled Nepali clip when the learner taps them. */
+const replyPronunciation: Partial<Record<string, PronunciationId>> = {
+  greet: 'namaste',
+  'wrong-greeting': 'forward',
+  'where-right': 'backward',
+  'where-wrong': 'forward',
+  'start-task': 'ok',
+  'wrong-ok': 'thanks',
+  thanks: 'thanks',
+  'wrong-thanks': 'namaste',
+};
+
+/** Which recurring character speaks NPC lines for each errand. */
+const errandSpeaker: Record<ActivityId, VoiceSpeakerId> = {
+  fruit: 'maya',
+  bread: 'arun',
+  flowers: 'tara',
+  family: 'parent',
+};
 
 /** A picture for each errand, so the street needs no English labels. */
 const icons: Record<ActivityId, string> = { fruit: '🍎', bread: '🥖', flowers: '💐', family: '🧸' };
@@ -65,8 +87,9 @@ export class MarketExplorer {
   private mistakes=0;
   private hintsUsed=0;
 
-  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void, private effects:EffectsController) {
+  constructor(private host: HTMLElement, private scene: ShopScene | undefined, private review:()=>void, private effects:EffectsController, private pronouncer:WordPronouncer, private marketAudio:MarketAudioController) {
     try {this.completed=new Set(readMarketVisits(localStorage));}catch{/* Exploration works without storage. */}
+    this.marketAudio.setToyMissing(!this.completed.has('family'));
     host.hidden=false;host.dataset.mode='roam';host.dataset.peek='false';
     host.innerHTML=`<aside class="market-journal word-strip" aria-label="What to do now"><p class="eyebrow" id="market-step-count"></p><p class="market-instruction" id="market-instruction" aria-live="polite"></p><p id="market-progress" class="sr-only"></p><div class="errand-chips">${marketActivities.map(activity=>`<button data-track="${activity.id}" aria-pressed="false" aria-label="${errandNames[activity.id]}: ${activity.name}${activity.required?'':' (optional)'}" ${activity.required?'':'data-optional="true"'}><span class="chip-icon" aria-hidden="true">${icons[activity.id]}</span><span class="chip-word" lang="ne">${errandWords[activity.id].replace(' teddy','')}</span><i class="chip-done" aria-hidden="true">✓</i></button>`).join('')}</div></aside><aside class="market-help" aria-label="Help"><div class="market-hint" role="status" hidden><p id="market-hint-text"></p><button class="hint-close" data-market-action="hint-close" aria-label="Close hint">✕</button></div><div class="strip-tools"><button class="help-main" data-market-action="peek" aria-label="Hint"><span aria-hidden="true">💡</span> Hint</button><button data-market-action="face-target" aria-label="Turn me toward it" title="Turn toward your goal">🧭</button><button class="strip-review" data-market-action="review" aria-label="Review numbers 1–5" title="Review numbers">१–५</button></div></aside><div class="market-waypoint" aria-hidden="true"><span class="wp-icon"></span><span class="cue-arrow"><i>↑</i></span><span class="wp-word"><strong lang="ne"></strong><span class="latin-guide"></span><small class="gloss"></small></span></div><span class="market-crosshair" aria-hidden="true">+</span><button id="market-talk" class="market-talk" disabled aria-label="Approach a neighbor to talk"></button><p class="market-roam-status" role="status" aria-live="polite"></p><div class="word-toast" role="status" aria-live="polite" hidden></div><div class="market-touch" aria-label="Market movement controls"><button data-move="turnleft" aria-label="Look left">↶</button><button data-move="forward" aria-label="Walk forward">↑</button><button data-move="turnright" aria-label="Look right">↷</button><button data-move="left" aria-label="Walk left">←</button><button data-move="backward" aria-label="Walk backward">↓</button><button data-move="right" aria-label="Walk right">→</button></div><p class="market-keys"><kbd>W A S D</kbd> walk · <kbd>← →</kbd> turn · <kbd>E</kbd> talk</p><section class="market-dialogue word-bubble" role="dialog" aria-modal="false" aria-labelledby="market-dialogue-title" hidden></section>`;
     this.prompt=host.querySelector('#market-talk')!;this.dialogue=host.querySelector('.market-dialogue')!;
@@ -85,7 +108,17 @@ export class MarketExplorer {
     this.updateProgress();this.frame(performance.now());this.focusWorld();
   }
   private focusWorld(){if(this.canvas)this.canvas.focus({preventScroll:true});else this.prompt.focus({preventScroll:true});}
-  setPaused(paused:boolean){this.paused=paused;this.clearKeys();this.host.hidden=paused;if(!paused)this.focusWorld();}
+  setPaused(paused:boolean){
+    this.paused=paused;this.clearKeys();this.host.hidden=paused;
+    if(paused){this.marketAudio.setDialogueBusy(false);this.marketAudio.setActive(false);}
+    else{
+      this.marketAudio.attachChild(this.scene?.market.childBody());
+      this.marketAudio.attachBicycle(this.scene?.market.bicycleBody());
+      this.marketAudio.setActive(true);
+      this.marketAudio.setToyMissing(!this.completed.has('family'));
+      this.focusWorld();
+    }
+  }
   private clearKeys=()=>{this.keys.clear();this.drag=undefined;this.effects.setWalking(false);this.effects.noteBump('none');};
   private keyDown=(event:KeyboardEvent)=>{
     if(this.paused)return;
@@ -190,12 +223,15 @@ export class MarketExplorer {
     if(action==='task-give'){this.deliverTask();return;}
     if(action==='toy-pick'){this.pickWorldItem('lost-toy');return;}
     if(action==='task-pause'){this.activeTask=undefined;this.renderTask();this.scene?.setMarketCarry(undefined);this.focusWorld();return;}
-    if(action)this.respond(action);
+    if(action)this.respond(action, button);
   };
   /** A reply in the conversation, chosen by tapping a word or by saying it in your own words to the AI neighbor. */
-  private respond(action:string){
+  private respond(action:string, button?: HTMLElement){
     const conversation=this.conversation;if(!conversation)return;
     if(action.startsWith('wrong')||action==='where-wrong')this.mistakes++;
+    const spoken=replyPronunciation[action??''];
+    // Player-selected replies always use the learner’s voice, never the NPC’s.
+    if(spoken)this.pronouncer.speak(spoken,{button,speaker:'player'});
     if(action==='greet'&&conversation.stage==='greet'){
       this.greeted.add(conversation.activity.id);this.scene?.market.react(conversation.activity.id,'greet',this.pose);
       this.toast('right','That’s right! <b lang="ne">नमस्ते</b> means hello.');
@@ -278,8 +314,17 @@ export class MarketExplorer {
     if(task&&this.greeted.has(activity.id)&&(task.picked.length||task.coins||task.carryingToy||task.delivered)){this.deliverTask();return;}
     this.progressed();
     this.conversation={activity,stage:this.greeted.has(activity.id)?this.completed.has(activity.id)?'done':'brief':'greet'};this.host.dataset.mode='conversation';
+    this.marketAudio.setDialogueBusy(true);
     this.scene?.market.react(activity.id,'greet',this.pose);
     this.pose.yaw=Math.atan2(-(activity.x-this.pose.x),-(activity.z-this.pose.z));this.pose.pitch=0;this.scene?.setMarketPose(this.pose);this.renderConversation();
+    // Neighbor greets first — hear नमस्ते in that neighbor’s voice.
+    if(this.conversation.stage==='greet')this.speakAsNpc(activity,'namaste');
+  }
+
+  private speakAsNpc(activity:MarketActivity,id:PronunciationId){
+    const speaker=errandSpeaker[activity.id];
+    const anchor=this.scene?.market.speakerBody(activity.id);
+    this.pronouncer.speak(id,{speaker,anchor,button:this.dialogue.querySelector('.bubble-words')??undefined});
   }
   /** What each neighbor asks for: Nepali words next to a picture, nothing else. */
   private request(activity:MarketActivity){
@@ -294,7 +339,7 @@ export class MarketExplorer {
     this.dialogue.hidden=false;this.dialogue.dataset.stage=stage;this.dialogue.dataset.activity=activity.id;
     let content=`<header><span class="speaker"><span aria-hidden="true">${icons[activity.id]}</span>${errandNames[activity.id]==='Lost teddy'?'Family':errandNames[activity.id]}</span><button class="bubble-close" data-market-action="leave" aria-label="Leave conversation">✕</button></header><div class="bubble-words" id="market-dialogue-title" tabindex="-1">`;
     // The neighbor's line first, then the learner's answer as tappable Nepali words.
-    const reply=(action:string,label:string,text:string,roman:string,english:string,extra='')=>`<button class="word-reply" data-market-action="${action}" aria-label="${label}">${word(text,roman,english)}${extra}</button>`;
+    const reply=(action:string,label:string,text:string,roman:string,english:string,extra='')=>`<button class="word-reply" data-market-action="${action}" aria-label="${label}">${speakerIcon}${word(text,roman,english)}${extra}</button>`;
     let replies='';
     // Alternate the order so the answer is never simply "the first button".
     const pair=(right:string,wrong:string)=>marketActivities.indexOf(activity)%2?wrong+right:right+wrong;
@@ -329,6 +374,8 @@ export class MarketExplorer {
     const talk=neighborAiAvailable()?`<form class="ai-talk"><div class="ai-field"><span aria-hidden="true">💬</span><input aria-label="Or say it in your own words" placeholder="…or type it in Nepali" maxlength="120" autocomplete="off" spellcheck="false"><button type="submit" aria-label="Say it">Say</button></div><p class="ai-status" role="status" aria-live="polite"></p></form>`:'';
     content+=`</div>${aiLine}<p class="bubble-task">${task}</p><div class="market-replies">${replies}</div>${talk}<p class="bubble-react" role="status" aria-live="polite"></p>`;
     this.dialogue.innerHTML=content;this.dialogue.querySelector<HTMLElement>('#market-dialogue-title')!.focus({preventScroll:true});
+    // Neighbor thank-you lines speak in that neighbor’s voice (parent after teddy return).
+    if(stage==='thanks'||stage==='done')this.speakAsNpc(activity,'thanks');
     this.renderInstruction();
   }
   private bump(){this.dialogue.dataset.bump='true';setTimeout(()=>delete this.dialogue.dataset.bump,500);}
@@ -415,6 +462,7 @@ export class MarketExplorer {
       if(task.carryingToy)return;
       if(this.scene&&!this.scene.market.pickToy(this.pose))return;
       task.carryingToy=true;this.familyStep=3;this.progressed();this.tasks.set('family',task);this.activeTask='family';this.tracked='family';this.markTracked();
+      this.effects.fabricRustle();
       this.scene?.setMarketCarry('toy');this.say(`🧸 ✓${sr(' You picked up the teddy. Bring it back to the family.')}`);
       this.toast('right','You found the <b lang="ne">रातो</b> (red) teddy, <b lang="ne">पछाडि</b> (behind) the planter! Bring it back.');this.renderTask();this.focusWorld();return;
     }
@@ -477,6 +525,7 @@ export class MarketExplorer {
   private finishActivity(activity:MarketActivity){
     if(activity.id==='bread'&&!this.completed.has('bread'))this.wallet=Math.max(0,this.wallet-3);
     this.completed.add(activity.id);this.scene?.market.markActivity(activity.id,activity.id==='bread'?1:activity.count);
+    if(activity.id==='family')this.marketAudio.setToyMissing(false);
     try{localStorage.setItem(marketVisitsKey,JSON.stringify([...this.completed]));localStorage.setItem('wayword.wallet.ne.v1',String(this.wallet));if(marketActivities.filter(item=>item.required).every(item=>this.completed.has(item.id)))completeLevel(localStorage,'next-adventure');}catch{/* Optional browser progress. */}
     this.tasks.delete(activity.id);if(this.activeTask===activity.id)this.activeTask=undefined;
     // Point straight at the next neighbor who still needs help.
@@ -484,8 +533,12 @@ export class MarketExplorer {
     this.progressed();this.updateProgress();this.renderTask();
   }
   private closeConversation(wave=true){
+    // Leaving cancels speech; advancing after हुन्छ keeps the clip playing.
+    if(wave)this.pronouncer.stop();
     if(wave&&this.conversation)this.scene?.market.react(this.conversation.activity.id,'bye',this.pose);
-    this.conversation=undefined;this.aiLine=undefined;this.dialogue.hidden=true;this.dialogue.replaceChildren();this.host.dataset.mode='roam';this.clearKeys();this.renderTask();this.focusWorld();this.renderInstruction();
+    this.conversation=undefined;this.aiLine=undefined;this.dialogue.hidden=true;this.dialogue.replaceChildren();this.host.dataset.mode='roam';
+    this.marketAudio.setDialogueBusy(false);
+    this.clearKeys();this.renderTask();this.focusWorld();this.renderInstruction();
   }
   private updateProgress(){
     const count=marketActivities.filter(activity=>activity.required&&this.completed.has(activity.id)).length;
@@ -571,7 +624,8 @@ export class MarketExplorer {
     this.focusWorld();
   }
   dispose(){
-    cancelAnimationFrame(this.raf);this.clearKeys();clearTimeout(this.peekTimer);clearTimeout(this.hintTimer);
+    cancelAnimationFrame(this.raf);this.clearKeys();clearTimeout(this.peekTimer);clearTimeout(this.hintTimer);this.pronouncer.stop();
+    this.marketAudio.setDialogueBusy(false);this.marketAudio.setActive(false);
     window.removeEventListener('keydown',this.keyDown);window.removeEventListener('keyup',this.keyUp);window.removeEventListener('blur',this.clearKeys);document.removeEventListener('visibilitychange',this.clearKeys);
     this.host.removeEventListener('click',this.click);this.host.removeEventListener('submit',this.submitSay);this.host.removeEventListener('pointerdown',this.touchDown);this.host.removeEventListener('pointerup',this.touchUp);this.host.removeEventListener('pointercancel',this.touchUp);this.host.removeEventListener('lostpointercapture',this.touchUp);
     this.canvas?.removeEventListener('pointerdown',this.lookDown);this.canvas?.removeEventListener('pointermove',this.lookMove);this.canvas?.removeEventListener('pointerup',this.lookUp);this.canvas?.removeEventListener('pointercancel',this.lookUp);

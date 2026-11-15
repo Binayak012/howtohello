@@ -180,20 +180,159 @@
   NPC bumps are wired and will play once this asset is added under
   `public/assets/audio/ne/maaf_garnuhos.wav`.
 
-## Shop word pronunciations (Piper Nepali · Chitwan)
+## Bicycle freewheel roll (market delivery pass)
+
+- Creator: SFXMint
+- Source: https://sfxmint.com/sounds/bicycle-freewheel-pass-by
+- Downloaded file: `bicycle_roll.mp3`
+- Original media: https://sfxmint.com/dl/growth-95eea51c87c783e278776e7a-part-1-v2.mp3
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Quiet freewheel/tire bed, looped with a short crossfade and played
+  positionally on the delivery bicycle while it rides the market street.
+- SHA-256: `7ae17f89dc37420c0744543b7efed29a1e2b37ed552d0a9cd645369161caeda5`
+
+## Bicycle pass-by (unused in current mix)
+
+- Creator: SamuelGremaud
+- Source: https://freesound.org/s/458862/
+- Downloaded file: `bicycle_pass.mp3`
+- Original title: BIKE - 1
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Kept in the repo as a licensed spare. The live market mix uses only
+  the looping freewheel roll plus proximity bells so a loop/teleport never
+  plays a whoosh jump at the spawn point.
+- SHA-256: `39b5f6a1ec461654db36e10522ea3ed5c2c14b7bf46c95c3e2c043ef842b9a29`
+
+## Bicycle bell
+
+- Creator: lechufly
+- Source: https://freesound.org/s/405572/
+- Downloaded file: `bicycle_bell.wav` (trimmed ding-ding used in game)
+- Source archive: `bicycle_bell_source.mp3` (full original download)
+- Original title: Bicycle ring bell
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: The original recording is a long multi-ring take with silence before
+  the first ding. Game audio uses a ~1.18 s mono excerpt (two metallic dings,
+  peak-normalized to ~0.92), played positionally on the bicycle once per pass
+  while approaching (~8.5 units before closest), rearmed after the bike moves
+  clearly away. Dialogue-panel open no longer mutes the bell; live voice
+  playback only gently ducks it. `bicycle_bell_source.mp3` keeps the full
+  original download for provenance.
+- SHA-256 (`bicycle_bell.wav`): `8cd6d0232ef2164b76a96bce9efdf378207b72afc03274d5269092285c200d80`
+- SHA-256 (`bicycle_bell_source.mp3`): `857f822f4b1aaf61be89f765fb759e963f1e8417d5cd82b57544555d78f6feef`
+
+## Soft fabric rustle (lost teddy pickup)
+
+- Creator: Kawgrim
+- Source: https://freesound.org/s/584866/
+- Downloaded file: `fabric_rustle.mp3`
+- Original title: Fabric Rustles.wav
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: A quiet ~0.42 s excerpt beginning at 0.35 s plays once when the
+  player successfully picks up the lost teddy. Paper bag rustle was not used
+  because it reads as paper, not plush fabric. Duplicate playback is blocked
+  while the excerpt is already active.
+- SHA-256: `e4209c25536de495cf63abf573ddf9b40c0e24df8e534259aba66edfc43afdad`
+
+## Morning Market ambience
+
+- Creator: Garuda1982
+- Source: https://freesound.org/s/757862/
+- Downloaded file: `market_ambience.mp3`
+- Original title: Supermarket Atmosphere
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Quiet supermarket bed with distant chatter, footsteps, and light
+  activity, recorded without background music. Independent of the shop Radio
+  control. Stored from Freesound’s public HQ/LQ preview encode for
+  redistribution; played quietly with a short equal-power loop crossfade and
+  further ducked during dialogue and Nepali pronunciation.
+- SHA-256: `82e65b414bbd4d84738fead1fc33d7cdcc2f204b366c598d03f85fbfb77fe81d`
+
+## Child soft sniffle A (lost-toy reaction)
+
+- Creator: craigsmith
+- Source: https://freesound.org/s/479836/
+- Downloaded file: `child_sniffle_a.mp3`
+- Original title: R15-57-Child Crying.wav
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Quiet child sniffling / slight whine (not sobbing). Only brief
+  excerpts are played positionally at the market child, with several seconds
+  of silence between variations, while the teddy is still missing.
+- SHA-256: `c68c530ee7e4ae9151f15010d5c436928eba95c045c3bb5bca52aaf5a7b33703`
+
+## Child soft sniffle B (lost-toy reaction)
+
+- Creator: craigsmith
+- Source: https://freesound.org/s/479840/
+- Downloaded file: `child_sniffle_b.mp3`
+- Original title: R28-53-Fussy Baby.wav
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Soft baby sniffles and fussing, used as a second quiet variation for
+  the lost-toy child. Same positional, speech-priority, and spacing rules as
+  sniffle A.
+- SHA-256: `7d1128828ddabdd877b3012d3434439a52cb1232dd3a0396197d8f6b6050e7fb`
+
+## Child relieved giggle
+
+- Creator: iccleste
+- Source: https://freesound.org/s/260825/
+- Downloaded file: `child_giggle.mp3`
+- Original title: Baby Giggle.wav
+- License: CC0 1.0
+- License URL: https://creativecommons.org/publicdomain/zero/1.0/
+- Notes: Short young-child giggle played once when the teddy is returned.
+  Skipped while dialogue or Nepali pronunciation is active, then played after.
+- SHA-256: `d71d76223345fd1f55799831563aadadb24333d7509ab669602782f1651e579c`
+
+## Shop and market word pronunciations (Piper Nepali · Chitwan)
 
 - Files: `ne/namaste.wav`, `ne/agadi.wav`, `ne/baaya.wav`, `ne/daaya.wav`,
-  `ne/pachhadi.wav`
-- Phrases: नमस्ते, अगाडि, बायाँ, दायाँ, पछाडि
-- Voice: Piper `ne_NP-chitwan-medium` (Nepali)
+  `ne/pachhadi.wav`, `ne/dhanyabaad.wav`, `ne/hunchha.wav`
+- Phrases: नमस्ते, अगाडि, बायाँ, दायाँ, पछाडि, धन्यवाद, हुन्छ
+- Voice: Piper `ne_NP-chitwan-medium` (Nepali) — the learner / player profile
 - Model: https://huggingface.co/rhasspy/piper-voices/tree/main/ne/ne_NP/chitwan/medium
 - Dataset license: CC0 (Chitwan / Nabu Casa voice datasets)
 - Piper voices license: MIT
 - Modifications: Each clip is a single-word synthesis exported to 22,050 Hz
   mono WAV; no English voice or Latin-transliteration reading was used.
+- Used in: shop greeting/direction cards (pronunciation preview), and
+  player-selected market replies. NPC dialogue uses the speaker folders below.
 - SHA-256:
   - `namaste.wav`: `7d844386bbe0ec5449d33556de05df03f7ef97b68eb5ce51637cfc8e00dacab8`
   - `agadi.wav`: `c571c770b44d5e19263b5d93fd24996a4059da4e46067462df6ccfd2593bc39f`
   - `baaya.wav`: `0af00f526e0b77f695e960761fdd56bf27d3725d99a503fd538a4f66017b4554`
   - `daaya.wav`: `5d9825252b7fd23047e3197487b05d94384b157003481b70eb51cd6534abe88c`
   - `pachhadi.wav`: `ee2bf31a62e134d861b19a51ce03efc4a52cf388399d63f64be92faf9c05b193`
+  - `dhanyabaad.wav`: `b186d8ffcad9f94c486c4ea8a454ca596a3db951e857510610a02cdd23f3550c`
+  - `hunchha.wav`: `568f99b39014e5dc7dcecdd0fd1f36a3b7a8d34acc99f2c5e93c8133c1ea8dbc`
+
+## NPC dialogue voices (Piper Nepali · Google multi-speaker)
+
+- Files: `ne/speakers/{maya,arun,tara,parent,shopkeeper}/{namaste,dhanyabaad}.wav`
+- Voice: Piper `ne_NP-google-medium` (18 speakers)
+- Model: https://huggingface.co/rhasspy/piper-voices/tree/main/ne/ne_NP/google/medium
+- Piper voices license: MIT
+- Notes: Each recurring NPC uses a different Google-Nepali speaker id so
+  dialogue is not the player’s Chitwan voice. Playback is positional at the
+  speaking NPC when a world anchor is available. Pitch/speed were not used to
+  fake identity. Arrival hosts (Asha, Lila) still need dedicated clips before
+  spoken dialogue can be wired there.
+- Speaker ids: maya=0, arun=1, tara=2, parent=3, shopkeeper=4
+- SHA-256:
+  - `maya/namaste.wav`: `5f95bb9e5ed6a92d15e2b61ac6a7f5a4a8445d71d7e5fc4968703a4560ca0140`
+  - `maya/dhanyabaad.wav`: `005ff586b183cf40594f272c974b287f31805af6dc40190829078e127302e99d`
+  - `arun/namaste.wav`: `97f9d03f43c668e1d40f5b82b69c236c8941e13376f0f407152b567a88b55db1`
+  - `arun/dhanyabaad.wav`: `ca21eab89d77f0969d4ee3aacf00debdc63670c0ccff04655023b1ddf54fe38e`
+  - `tara/namaste.wav`: `b6c4356c2680f93fc058fe9079e127b3ce9126e2834c23033f7408c28e44008a`
+  - `tara/dhanyabaad.wav`: `1fd046f4803c1f1af6b03115a13d47778b28cbd3a080867f35c4761f109cf9d7`
+  - `parent/namaste.wav`: `b7e13ed3ba3eb2e7e600e16c2fd1f8db30d929fa23784317cdb51b484a2729f4`
+  - `parent/dhanyabaad.wav`: `9595f2390936a232b8a2a15d03561598ffff147b1cbc65a768383cee6f7d21f9`
+  - `shopkeeper/namaste.wav`: `769d4bf896defd0a87c4211886a9ffc1b06de5d3cf31c064e4600c6f35433e11`
+  - `shopkeeper/dhanyabaad.wav`: `47a9d784170a712b44e47dd53c78beac9ccb5d88ea9c74dc9a1441dd79545a12`

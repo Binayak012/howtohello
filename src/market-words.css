@@ -63,6 +63,12 @@
 .word-reply{font-size:30px;padding:10px 20px;border-radius:22px;background:white;border:2px solid #e3d5bc;box-shadow:0 4px 0 #e3d5bc;display:inline-flex;align-items:center;gap:8px}
 .word-reply:hover,.word-reply:focus-visible{border-color:var(--teal);box-shadow:0 4px 0 var(--teal-d)}
 .word-reply .bubble-icon{font-size:.8em}
+.word-reply .word-speaker{width:18px;height:18px;flex:none;stroke:var(--teal-d);stroke-width:1.85;stroke-linejoin:round;stroke-linecap:round;opacity:.8;pointer-events:none}
+.word-reply.is-speaking .word-speaker{stroke:var(--teal);opacity:1}
+.word-reply.is-speaking .speaker-waves{animation:word-speaking .85s ease-in-out infinite}
+.bubble-words.is-speaking .live-word strong{color:var(--teal-d)}
+@keyframes word-speaking{50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.word-reply.is-speaking .speaker-waves{animation:none}}
 #app #market-roam .bubble-react{font-size:18px;color:var(--ink);margin:4px 0 0;min-height:24px}
 .word-bubble[data-bump=true]{animation:bubble-bump .45s ease-out}
 @keyframes bubble-bump{30%{transform:translateX(-8px) scale(1.03)}60%{transform:translateX(5px)}}

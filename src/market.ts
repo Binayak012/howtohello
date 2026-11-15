@@ -4,6 +4,8 @@ import { marketActivities, lostToy, pickColors, type ActivityId } from './market
 // The street shares the shop's world: crossing the threshold never cuts scenes.
 export class GoldenMarket {
   root = new THREE.Group();
+  /** Optional street-audio hook while the delivery bicycle is riding. */
+  onBicyclePass?: (riding: boolean, progress: number) => void;
   private people: { body: THREE.Group; limbs: THREE.Group[]; role: 'vendor' | 'shopper' | 'child' | 'parent' | 'elder'; phase: number; home:THREE.Vector3; facing:number }[] = [];
   private clouds: THREE.Group[] = [];
   private bicycle = new THREE.Group();
@@ -263,6 +265,16 @@ export class GoldenMarket {
   }
   availableItem(id:ActivityId){return [...this.taskItems].find(([key,item])=>!key.includes('wrong')&&item.activity===id&&item.object.visible)?.[0];}
   returnItem(key:string){const item=this.taskItems.get(key);if(item)item.object.visible=true;}
+  /** World anchor for positional child reactions (sniffles / giggle). */
+  childBody(){return this.people.find(person=>person.role==='child')?.body;}
+  /** World anchor for the delivery bicycle pass audio. */
+  bicycleBody(){return this.bicycle;}
+  /** World anchor for the neighbor who speaks during an errand conversation. */
+  speakerBody(id:ActivityId){
+    if(id==='family')return this.people.find(person=>person.role==='parent')?.body;
+    return this.people.find(person=>person.body.userData.activityId===id&&person.role==='vendor')?.body
+      ?? this.people.find(person=>person.body.userData.activityId===id)?.body;
+  }
   pickToy(player:{x:number;z:number}){
     if(!this.lostTeddy.visible)return false;
     this.fly(this.lostTeddy,this.lostTeddy.position,new THREE.Vector3(14-player.z,1.05,player.x+26));this.lostTeddy.visible=false;return true;
@@ -504,12 +516,14 @@ export class GoldenMarket {
     // One purposeful delivery pass, with turning wheels and pedals.
     const deliveryTime=t%45;
     const ride = THREE.MathUtils.clamp((deliveryTime - 1.8) / 7.2, 0, 1);
+    const riding = !reduced && deliveryTime >= 1.8 && deliveryTime < 9;
     this.bicycle.position.set(1.6, 0, 10 + ride * 46);
-    this.bicycle.visible = reduced || (deliveryTime >= 1.8 && deliveryTime < 9);
+    this.bicycle.visible = reduced || riding;
     this.wheels.forEach(wheel => wheel.rotation.z = -ride * 46 / .36);
     this.pedals.rotation.x = t * 7;
     this.bicycle.getObjectsByProperty('name', 'cycling-leg--1').forEach(leg => leg.rotation.x = Math.sin(t * 7) * .5);
     this.bicycle.getObjectsByProperty('name', 'cycling-leg-1').forEach(leg => leg.rotation.x = -Math.sin(t * 7) * .5);
+    this.onBicyclePass?.(riding, ride);
     this.clouds.forEach((cloud, i) => cloud.position.x = -35 + i % 4 * 22 + Math.sin(t * .025 + i) * .7);
     this.birds.forEach((bird, i) => {
       bird.position.set(((t * 1.1 + i * 3.7) % 35) - 17, 8 + Math.sin(t * .5 + i) * .4 + i % 3 * .8, 27 + i * 3);
