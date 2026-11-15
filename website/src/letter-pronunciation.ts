@@ -14,8 +14,8 @@ export function setupLetterPronunciation(root: HTMLElement, onPlaybackChange: (p
   const status = root.querySelector<HTMLElement>('#letter-sound-status')!;
   const audio = new Audio();
   audio.preload = 'auto';
-  audio.defaultPlaybackRate = .75;
-  audio.playbackRate = .75;
+  audio.defaultPlaybackRate = 1.4;
+  audio.playbackRate = 1.4;
   audio.preservesPitch = true;
   let index = 0;
   let revision = 0;
@@ -35,7 +35,7 @@ export function setupLetterPronunciation(root: HTMLElement, onPlaybackChange: (p
     button.title = `Listen to ${sound.letter}`;
     status.textContent = '';
     audio.src = `/audio/ne/${sound.clip}.wav`;
-    audio.playbackRate = .75;
+    audio.playbackRate = 1.4;
     audio.load();
   }
   button.onclick = async () => {

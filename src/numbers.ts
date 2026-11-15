@@ -77,7 +77,7 @@ export class NumberLesson {
       if (button.dataset.numberAnswer && !this.solved) {
         const number = numbers[this.checkOrder[this.checkIndex] - 1];
         this.solved = Number(button.dataset.numberAnswer) === number.value;
-        if (this.solved) this.render('#number-next', `That’s right. ${number.word} means ${number.value}.`);
+        if (this.solved) this.render('#numbers-title', `That’s right. ${number.word} means ${number.value}.`);
         else this.status.textContent = `Not quite. ${number.word} means ${number.value}. Try that number.`;
       } else if (action === 'advance' && this.solved) {
         this.solved = false;
